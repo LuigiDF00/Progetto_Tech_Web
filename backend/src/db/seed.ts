@@ -1,15 +1,13 @@
-const { sequelize, User, Riddle, ControlString, Attempt } = require('../models');
-const bcrypt = require('bcryptjs');
+import { sequelize, User, Riddle, ControlString, Attempt } from '../models';
+import bcrypt from 'bcryptjs';
 
-async function seedDatabase() {
-  console.log('🌱 Popolamento database con dati demo per la presentazione (Sequelize ORM)...');
+export async function seedDatabase(): Promise<void> {
+  console.log('🌱 Popolamento database con dati demo per la presentazione (Sequelize TypeScript)...');
 
-  // Sync models with DB (force: true drops and recreates tables)
   await sequelize.sync({ force: true });
 
   const passHash = bcrypt.hashSync('Password123!', 10);
 
-  // 1. Inserisci Utenti Demo
   const mario = await User.create({
     id: 1,
     username: 'mario_dev',
@@ -38,7 +36,6 @@ async function seedDatabase() {
     password_hash: passHash
   });
 
-  // 2. Inserisci Enigmi Demo
   const riddle1 = await Riddle.create({
     id: 1,
     author_id: mario.id,
@@ -69,7 +66,6 @@ async function seedDatabase() {
     public_neg_example: '#833'
   });
 
-  // 3. Stringhe di controllo
   await ControlString.bulkCreate([
     { id: 1, riddle_id: riddle1.id, string_value: '1234', is_positive: 1 },
     { id: 2, riddle_id: riddle1.id, string_value: '9999', is_positive: 1 },
@@ -85,7 +81,6 @@ async function seedDatabase() {
     { id: 10, riddle_id: riddle3.id, string_value: '123456', is_positive: 0 }
   ]);
 
-  // 4. Tentativi Demo
   await Attempt.bulkCreate([
     { id: 1, user_id: luigi.id, riddle_id: riddle1.id, proposed_regex: '^[0-9]{4}$', pos_passed_count: 2, neg_passed_count: 2, total_pos_count: 2, total_neg_count: 2, is_solved: 1 },
     { id: 2, user_id: gigi.id, riddle_id: riddle1.id, proposed_regex: '^[0-9]{4}$', pos_passed_count: 2, neg_passed_count: 2, total_pos_count: 2, total_neg_count: 2, is_solved: 1 },
@@ -94,7 +89,7 @@ async function seedDatabase() {
     { id: 5, user_id: gigi.id, riddle_id: riddle3.id, proposed_regex: '^#[0-9a-fA-F]{6}$', pos_passed_count: 2, neg_passed_count: 1, total_pos_count: 2, total_neg_count: 1, is_solved: 1 }
   ]);
 
-  console.log('✅ Popolamento dati demo con Sequelize completato con successo!');
+  console.log('✅ Popolamento dati demo con Sequelize TypeScript completato con successo!');
 }
 
 if (require.main === module) {
@@ -104,4 +99,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = seedDatabase;
+export default seedDatabase;

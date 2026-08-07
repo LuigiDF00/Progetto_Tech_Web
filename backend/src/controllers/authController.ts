@@ -1,10 +1,11 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { Op } = require('sequelize');
-const { User } = require('../models');
-const { JWT_SECRET } = require('../middlewares/authMiddleware');
+import { Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { Op } from 'sequelize';
+import { User } from '../models';
+import { JWT_SECRET } from '../middlewares/authMiddleware';
 
-async function register(req, res, next) {
+export async function register(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
     const { username, email, password } = req.body;
 
@@ -12,14 +13,14 @@ async function register(req, res, next) {
       return res.status(400).json({ error: 'Username, email e password sono obbligatori.' });
     }
 
-    const cleanUsername = username.trim();
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = String(username).trim();
+    const cleanEmail = String(email).trim().toLowerCase();
 
     if (cleanUsername.length < 3) {
       return res.status(400).json({ error: 'Lo username deve contenere almeno 3 caratteri.' });
     }
 
-    if (password.length < 6) {
+    if (String(password).length < 6) {
       return res.status(400).json({ error: 'La password deve contenere almeno 6 caratteri.' });
     }
 
@@ -60,7 +61,7 @@ async function register(req, res, next) {
   }
 }
 
-async function login(req, res, next) {
+export async function login(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
     const { usernameOrEmail, password } = req.body;
 
@@ -68,7 +69,7 @@ async function login(req, res, next) {
       return res.status(400).json({ error: 'Inserisci username/email e password.' });
     }
 
-    const queryStr = usernameOrEmail.trim();
+    const queryStr = String(usernameOrEmail).trim();
     const user = await User.findOne({
       where: {
         [Op.or]: [
@@ -104,8 +105,12 @@ async function login(req, res, next) {
   }
 }
 
-async function me(req, res, next) {
+export async function me(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non autenticato.' });
+    }
+
     const user = await User.findByPk(req.user.id, {
       attributes: ['id', 'username', 'email', 'avatar_url', 'created_at']
     });
@@ -120,7 +125,7 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = {
+export default {
   register,
   login,
   me

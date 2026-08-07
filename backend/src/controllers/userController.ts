@@ -1,9 +1,14 @@
-const { User } = require('../models');
-const leaderboardService = require('../services/leaderboardService');
+import { Request, Response, NextFunction } from 'express';
+import { User } from '../models';
+import leaderboardService from '../services/leaderboardService';
 
-async function getProfile(req, res, next) {
+export async function getProfile(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
-    const userId = req.params.id || req.user.id;
+    const userId = req.params.id || (req.user ? req.user.id : null);
+    if (!userId) {
+      return res.status(400).json({ error: 'ID Utente non specificato.' });
+    }
+
     const stats = await leaderboardService.getUserStats(userId);
 
     if (!stats) {
@@ -16,8 +21,12 @@ async function getProfile(req, res, next) {
   }
 }
 
-async function uploadAvatar(req, res, next) {
+export async function uploadAvatar(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Utente non autenticato.' });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: 'Nessun file caricato.' });
     }
@@ -38,7 +47,7 @@ async function uploadAvatar(req, res, next) {
   }
 }
 
-module.exports = {
+export default {
   getProfile,
   uploadAvatar
 };

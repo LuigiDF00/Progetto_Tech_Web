@@ -1,13 +1,42 @@
-const { User, Riddle, Attempt } = require('../models');
+import { User, Riddle, Attempt } from '../models';
+
+export interface LeaderboardUserEntry {
+  user_id: number;
+  username: string;
+  avatar_url: string | null;
+  solved_count: number;
+  riddles_solved: number;
+  created_count: number;
+  riddles_created: number;
+  avg_attempts: number;
+}
+
+export interface UserStatsResult {
+  id: number;
+  username: string;
+  email: string;
+  avatar_url: string | null;
+  created_at: Date;
+  riddles_solved: number;
+  riddles_created: number;
+  solved_count: number;
+  created_count: number;
+  total_attempts: number;
+  avg_attempts: number;
+  stats: {
+    solved_count: number;
+    created_count: number;
+    total_attempts: number;
+    avg_attempts: number;
+    riddles_solved: number;
+    riddles_created: number;
+  };
+}
 
 /**
- * Calcola e restituisce la classifica globale degli utenti tramite Sequelize Models.
- * Ordinata per:
- * 1. Numero di enigmi unici risolti (DESC)
- * 2. Minor numero medio di tentativi impiegati per enigma (ASC)
- * 3. Username (ASC)
+ * Calcola e restituisce la classifica globale degli utenti tramite Modelli TypeScript.
  */
-async function getGlobalLeaderboard() {
+export async function getGlobalLeaderboard(): Promise<LeaderboardUserEntry[]> {
   const users = await User.findAll({
     include: [
       {
@@ -23,17 +52,15 @@ async function getGlobalLeaderboard() {
     ]
   });
 
-  const leaderboard = users.map(user => {
+  const leaderboard: LeaderboardUserEntry[] = users.map(user => {
     const attempts = user.attempts || [];
     const riddles = user.riddles || [];
     const solvedAttempts = attempts.filter(a => a.is_solved === 1);
     
-    // Set degli ID degli enigmi unici risolti
     const uniqueSolvedRiddleIds = new Set(solvedAttempts.map(a => a.riddle_id));
     const solvedCount = uniqueSolvedRiddleIds.size;
     const createdCount = riddles.length;
 
-    // Calcolo tentativi medi
     let avgAttempts = 0;
     if (uniqueSolvedRiddleIds.size > 0) {
       avgAttempts = Number((attempts.length / uniqueSolvedRiddleIds.size).toFixed(2));
@@ -53,7 +80,6 @@ async function getGlobalLeaderboard() {
     };
   });
 
-  // Ordinamento
   leaderboard.sort((a, b) => {
     if (b.solved_count !== a.solved_count) {
       return b.solved_count - a.solved_count;
@@ -68,9 +94,9 @@ async function getGlobalLeaderboard() {
 }
 
 /**
- * Restituisce le statistiche dettagliate di un singolo utente tramite Sequelize Models
+ * Restituisce le statistiche dettagliate di un singolo utente tramite Modelli TypeScript
  */
-async function getUserStats(userId) {
+export async function getUserStats(userId: number | string): Promise<UserStatsResult | null> {
   const user = await User.findByPk(userId, {
     attributes: ['id', 'username', 'email', 'avatar_url', 'created_at'],
     include: [
@@ -103,8 +129,8 @@ async function getUserStats(userId) {
     : (totalAttempts > 0 ? totalAttempts : 0);
 
   const userJson = user.toJSON();
-  delete userJson.riddles;
-  delete userJson.attempts;
+  delete (userJson as any).riddles;
+  delete (userJson as any).attempts;
 
   return {
     ...userJson,
@@ -125,7 +151,7 @@ async function getUserStats(userId) {
   };
 }
 
-module.exports = {
+export default {
   getGlobalLeaderboard,
   getUserStats
 };

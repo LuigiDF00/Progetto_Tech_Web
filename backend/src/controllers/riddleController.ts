@@ -1,9 +1,15 @@
-const { sequelize, Riddle, ControlString, Attempt, User } = require('../models');
-const regexService = require('../services/regexService');
+import { Request, Response, NextFunction } from 'express';
+import { sequelize, Riddle, ControlString, Attempt, User } from '../models';
+import regexService from '../services/regexService';
 
-async function createRiddle(req, res, next) {
+export async function createRiddle(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   const transaction = await sequelize.transaction();
   try {
+    if (!req.user) {
+      await transaction.rollback();
+      return res.status(401).json({ error: 'Utente non autenticato.' });
+    }
+
     const {
       title,
       description,
@@ -19,10 +25,10 @@ async function createRiddle(req, res, next) {
       return res.status(400).json({ error: 'Tutti i campi principali dell\'enigma sono obbligatori.' });
     }
 
-    let compiledRegex;
+    let compiledRegex: RegExp;
     try {
       compiledRegex = regexService.compileRegex(secret_regex);
-    } catch (err) {
+    } catch (err: any) {
       await transaction.rollback();
       return res.status(400).json({ error: `La Regex segreta non è valida: ${err.message}` });
     }
@@ -37,8 +43,12 @@ async function createRiddle(req, res, next) {
       return res.status(400).json({ error: 'La tua Regex segreta soddisfa (erroneamente) l\'esempio negativo pubblico fornito.' });
     }
 
-    const posStrings = Array.isArray(control_pos_strings) ? control_pos_strings.slice(0, 10).filter(s => s !== undefined && s !== '') : [];
-    const negStrings = Array.isArray(control_neg_strings) ? control_neg_strings.slice(0, 10).filter(s => s !== undefined && s !== '') : [];
+    const posStrings: string[] = Array.isArray(control_pos_strings) 
+      ? control_pos_strings.slice(0, 10).filter(s => s !== undefined && s !== '') 
+      : [];
+    const negStrings: string[] = Array.isArray(control_neg_strings) 
+      ? control_neg_strings.slice(0, 10).filter(s => s !== undefined && s !== '') 
+      : [];
 
     if (posStrings.length === 0 || negStrings.length === 0) {
       await transaction.rollback();
@@ -60,11 +70,11 @@ async function createRiddle(req, res, next) {
 
     const riddle = await Riddle.create({
       author_id: req.user.id,
-      title: title.trim(),
-      description: description.trim(),
-      secret_regex: secret_regex.trim(),
-      public_pos_example,
-      public_neg_example
+      title: String(title).trim(),
+      description: String(description).trim(),
+      secret_regex: String(secret_regex).trim(),
+      public_pos_example: String(public_pos_example),
+      public_neg_example: String(public_neg_example)
     }, { transaction });
 
     const controlStringRecords = [
@@ -88,7 +98,7 @@ async function createRiddle(req, res, next) {
   }
 }
 
-async function getAllRiddles(req, res, next) {
+export async function getAllRiddles(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
     const userId = req.user ? req.user.id : null;
 
@@ -136,7 +146,7 @@ async function getAllRiddles(req, res, next) {
   }
 }
 
-async function getRiddleById(req, res, next) {
+export async function getRiddleById(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
     const riddleId = req.params.id;
     const userId = req.user ? req.user.id : null;
@@ -156,7 +166,7 @@ async function getRiddleById(req, res, next) {
     }
 
     let isSolved = false;
-    let userAttempts = [];
+    let userAttempts: any[] = [];
 
     if (userId) {
       const attempts = await Attempt.findAll({
@@ -196,8 +206,12 @@ async function getRiddleById(req, res, next) {
   }
 }
 
-async function submitAttempt(req, res, next) {
+export async function submitAttempt(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Utente non autenticato.' });
+    }
+
     const riddleId = req.params.id;
     const { proposed_regex } = req.body;
 
@@ -217,7 +231,7 @@ async function submitAttempt(req, res, next) {
     let evalResult;
     try {
       evalResult = regexService.evaluateAttempt(proposed_regex, controlStrings);
-    } catch (err) {
+    } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }
 
@@ -225,8 +239,8 @@ async function submitAttempt(req, res, next) {
 
     await Attempt.create({
       user_id: req.user.id,
-      riddle_id: riddleId,
-      proposed_regex: proposed_regex.trim(),
+      riddle_id: Number(riddleId),
+      proposed_regex: String(proposed_regex).trim(),
       pos_passed_count: evalResult.posPassedCount,
       neg_passed_count: evalResult.negPassedCount,
       total_pos_count: evalResult.totalPosCount,
@@ -239,7 +253,7 @@ async function submitAttempt(req, res, next) {
         ? '🎉 Complimenti! La tua Regex soddisfa tutte le stringhe di controllo!' 
         : 'Soluzione non ancora corretta. Riprova!',
       result: {
-        proposed_regex: proposed_regex.trim(),
+        proposed_regex: String(proposed_regex).trim(),
         pos_passed_count: evalResult.posPassedCount,
         total_pos_count: evalResult.totalPosCount,
         neg_passed_count: evalResult.negPassedCount,
@@ -252,7 +266,7 @@ async function submitAttempt(req, res, next) {
   }
 }
 
-module.exports = {
+export default {
   createRiddle,
   getAllRiddles,
   getRiddleById,

@@ -1,13 +1,12 @@
-const request = require('supertest');
-const app = require('../src/app');
-const { sequelize } = require('../src/models');
+import request from 'supertest';
+import app from '../src/app';
+import { sequelize } from '../src/models';
 
-describe('RegexRiddle REST API & E2E Tests (Sequelize ORM)', () => {
-  let userToken;
-  let userId;
-  let riddleId;
+describe('RegexRiddle REST API & E2E Tests (Sequelize TypeScript)', () => {
+  let userToken: string;
+  let userId: number;
+  let riddleId: number;
 
-  // Clean DB tables before running tests
   beforeAll(async () => {
     await sequelize.sync({ force: true });
   });
@@ -107,7 +106,7 @@ describe('RegexRiddle REST API & E2E Tests (Sequelize ORM)', () => {
         title: 'Test Errato',
         description: 'Test',
         secret_regex: '^[a-z]+$',
-        public_pos_example: '1234', // Non soddisfa ^[a-z]+$
+        public_pos_example: '1234',
         public_neg_example: 'abc',
         control_pos_strings: ['abc'],
         control_neg_strings: ['123']
@@ -129,7 +128,7 @@ describe('RegexRiddle REST API & E2E Tests (Sequelize ORM)', () => {
       .post(`/api/riddles/${riddleId}/attempt`)
       .set('Authorization', `Bearer ${userToken}`)
       .send({
-        proposed_regex: '^[0-9]+$' // Accetta 12345 (che è tra le negazioni)
+        proposed_regex: '^[0-9]+$'
       });
 
     expect(res.statusCode).toEqual(200);
