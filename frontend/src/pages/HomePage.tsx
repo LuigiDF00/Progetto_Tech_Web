@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Riddle } from '../types';
-import { Puzzle, Trophy, Terminal, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { PixelTrophyGold, PixelTrophySilver, PixelTrophyBronze } from '../components/PixelIcons';
+import { Terminal, Shield, Trophy, ArrowRight, Zap } from 'lucide-react';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -28,101 +29,140 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  const getTierInfo = (index: number) => {
+    const tiers = [
+      { name: 'ORO', tierClass: 'tier-gold', badgeClass: 'gold', boxClass: 'gold-bg', btnClass: 'card-btn-gold', Icon: PixelTrophyGold },
+      { name: 'ARGENTO', tierClass: 'tier-silver', badgeClass: 'silver', boxClass: 'silver-bg', btnClass: 'card-btn-silver', Icon: PixelTrophySilver },
+      { name: 'BRONZO', tierClass: 'tier-bronze', badgeClass: 'bronze', boxClass: 'bronze-bg', btnClass: 'card-btn-bronze', Icon: PixelTrophyBronze }
+    ];
+    return tiers[index % 3];
+  };
+
   return (
     <div>
-      {/* Hero Section */}
-      <div className="glass-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', marginBottom: '2.5rem', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-        <div className="badge badge-indigo" style={{ marginBottom: '1.2rem' }}>
-          <Sparkles size={14} /> Sfida la tua mente con le RegEx
+      {/* Cyber Hero Banner */}
+      <div 
+        style={{ 
+          padding: '3.5rem 2rem', 
+          textAlign: 'center', 
+          marginBottom: '3rem', 
+          background: 'linear-gradient(180deg, #0f172a 0%, #080c16 100%)', 
+          border: '2px solid var(--neon-cyan)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: '0 0 30px rgba(0, 240, 255, 0.25), inset 0 0 20px rgba(0, 240, 255, 0.08)',
+          position: 'relative'
+        }}
+      >
+        <div className="hud-tag hud-tag-cyan" style={{ marginBottom: '1.2rem' }}>
+          <Zap size={14} /> CYBER REGEX ENGINE v2.0
         </div>
-        <h1 style={{ fontSize: '3rem', fontWeight: 800, lineHeight: 1.15, marginBottom: '1.2rem', background: 'linear-gradient(135deg, #ffffff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Metti alla prova le tue abilità con <br />
-          <span style={{ background: 'linear-gradient(135deg, #a855f7, #6366f1, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Espressioni Regolari Segrete
+
+        <h1 className="page-title-neon" style={{ fontSize: '3rem', marginBottom: '1.2rem' }}>
+          REGULATED EXPRESSION <br />
+          <span style={{ color: 'var(--neon-pink)', textShadow: '0 0 15px rgba(236, 72, 153, 0.8)' }}>
+            CHALLENGE MATRIX
           </span>
         </h1>
-        <p style={{ fontSize: '1.15rem', color: 'var(--text-muted)', maxWidth: '700px', margin: '0 auto 2rem' }}>
-          RegexRiddle è la piattaforma di sfide logiche in cui crei enigmi con stringhe di controllo e risolvi i rompicapo ideati dagli altri sviluppatori.
+
+        <p style={{ fontSize: '1.15rem', color: 'var(--text-muted)', maxWidth: '750px', margin: '0 auto 2.2rem' }}>
+          RegexRiddle è la piattaforma di hacking logico per sviluppatori. Crea enigmi con stringhe di controllo segrete e scopri le espressioni regolari trasparenti al sistema.
         </p>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link to="/riddles" className="btn btn-primary btn-lg">
-            <Puzzle size={20} /> Esplora Enigmi
+        <div style={{ display: 'flex', gap: '1.2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link to="/riddles" className="btn btn-pill-pink" style={{ padding: '0.85rem 2rem', fontSize: '0.95rem' }}>
+            ESPLORA LE SFIDE <ArrowRight size={18} />
           </Link>
-          <Link to="/rules" className="btn btn-secondary btn-lg">
-            <Terminal size={20} /> Come Funziona
+          <Link to="/rules" className="btn btn-secondary" style={{ padding: '0.85rem 2rem', fontSize: '0.95rem' }}>
+            <Terminal size={18} /> MANUALE DI SISTEMA
           </Link>
         </div>
       </div>
 
-      {/* Grid Caratteristiche */}
-      <div className="grid-3" style={{ marginBottom: '3rem' }}>
-        <div className="glass-card">
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-            <Terminal size={24} />
+      {/* Cyber Feature Cards */}
+      <div className="grid-3" style={{ marginBottom: '3.5rem' }}>
+        <div className="cyber-stat-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <Terminal size={26} style={{ color: 'var(--neon-cyan)' }} />
+            <span className="hud-tag hud-tag-cyan">ONLINE</span>
           </div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Crea Enigmi Segreti</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Definisci la tua Regex segreta, aggiungi fino a 10 stringhe di controllo positive e negative e sfida gli altri a scoprirla.
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#ffffff' }}>1. CREA ENIGMI SEGRETI</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
+            Imposta la tua Regex di riferimento e fino a 10 stringhe di controllo positive e negative trasparenti al server.
           </p>
         </div>
 
-        <div className="glass-card">
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-            <Puzzle size={24} />
+        <div className="cyber-stat-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <Shield size={26} style={{ color: 'var(--neon-green)' }} />
+            <span className="hud-tag hud-tag-green">TESTING</span>
           </div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Test in Tempo Reale</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Proponi le tue regex per risolvere gli enigmi. Il sistema verifica istantaneamente il comportamento sulle stringhe segrete.
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#ffffff' }}>2. TEST REAL-TIME</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
+            Invia le tue regex. Il motore valuta istantaneamente l'esattezza dei match rispetto ai vettori di test segreti.
           </p>
         </div>
 
-        <div className="glass-card">
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.15)', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-            <Trophy size={24} />
+        <div className="cyber-stat-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <Trophy size={26} style={{ color: 'var(--neon-gold)' }} />
+            <span className="hud-tag hud-tag-gold">SCORES</span>
           </div>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Scala la Classifica</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Guadagna posizioni risolvendo più enigmi nel minor numero medio di tentativi possibili.
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#ffffff' }}>3. SCALA LA CLASSIFICA</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
+            Ottieni posizioni nel ranking globale accumulando sfide completate col minor numero medio di tentativi.
           </p>
         </div>
       </div>
 
-      {/* Anteprima Enigmi Recenti */}
+      {/* Featured Riddles Cyber Showcase */}
       {featuredRiddles.length > 0 && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 700 }}>Sfide In Evidenza</h2>
-            <Link to="/riddles" style={{ color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              Vedi tutte <ArrowRight size={16} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.8rem' }}>
+            <h2 className="page-title-neon" style={{ fontSize: '1.8rem' }}>SFIDE IN EVIDENZA</h2>
+            <Link to="/riddles" style={{ color: 'var(--neon-cyan)', fontWeight: 800, fontFamily: 'var(--font-hud)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              VEDI TUTTE ({stats.riddlesCount}) <ArrowRight size={16} />
             </Link>
           </div>
 
-          <div className="grid-3">
-            {featuredRiddles.map((riddle) => (
-              <div key={riddle.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{riddle.title}</h3>
-                    {riddle.is_solved_by_current_user === 1 && (
-                      <span className="badge badge-emerald"><CheckCircle2 size={12} /> Risolto</span>
-                    )}
-                  </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                    {riddle.description.length > 90 ? `${riddle.description.substring(0, 90)}...` : riddle.description}
-                  </p>
-                </div>
+          <div className="cards-grid">
+            {featuredRiddles.map((riddle, index) => {
+              const tier = getTierInfo(index);
+              const TrophyIcon = tier.Icon;
+              const isSolved = Number(riddle.is_solved_by_current_user) === 1;
 
-                <div>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-                    Autore: <strong>{riddle.author_name}</strong>
+              return (
+                <div key={riddle.id} className={`riddle-card ${tier.tierClass}`}>
+                  <div className={`card-tier-badge ${tier.badgeClass}`}>
+                    <TrophyIcon />
+                    <span>{tier.name}</span>
                   </div>
-                  <Link to={`/riddles/${riddle.id}`} className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
-                    Prova a Risolvere
-                  </Link>
+
+                  <div>
+                    <h3 className="card-title">{riddle.title}</h3>
+                    {isSolved && <div className="card-status-solved">RISOLTO</div>}
+                    <p className="card-description">
+                      {riddle.description.length > 90 ? `${riddle.description.substring(0, 90)}...` : riddle.description}
+                    </p>
+
+                    <div className={`card-example-box ${tier.boxClass}`}>
+                      <div className="example-label">Esempio Positivo:</div>
+                      <div className="example-line" style={{ fontWeight: 700 }}>{riddle.public_pos_example || 'N/A'}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="card-meta">
+                      <span>Autore: <strong className="highlight">{riddle.author_name}</strong></span>
+                      <span>Risolto da: <strong className="highlight">{riddle.solved_by_count ?? 0}</strong></span>
+                    </div>
+
+                    <Link to={`/riddles/${riddle.id}`} className={`card-btn ${tier.btnClass}`}>
+                      {isSolved ? 'VISUALIZZA DETTAGLI' : 'INIZIA SFIDA'}
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

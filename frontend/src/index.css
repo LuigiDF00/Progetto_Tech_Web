@@ -712,10 +712,259 @@ button, input, textarea, select {
   margin-top: auto;
 }
 
+/* ==========================================================================
+   CYBERPUNK 2077 / RETRO HUD DESIGN SYSTEM EXTENSIONS
+   ========================================================================== */
+
+/* CRT Terminals for Positive & Negative Tests */
+.crt-terminal {
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  font-family: var(--font-mono);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.crt-terminal::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.crt-terminal-pos {
+  background: #041a14;
+  border: 2px solid var(--neon-green);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.25), inset 0 0 10px rgba(16, 185, 129, 0.1);
+}
+
+.crt-terminal-neg {
+  background: #1c0612;
+  border: 2px solid var(--neon-pink);
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.25), inset 0 0 10px rgba(236, 72, 153, 0.1);
+}
+
+.crt-terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-hud);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.crt-terminal-pos .crt-terminal-header {
+  color: var(--neon-green);
+}
+
+.crt-terminal-neg .crt-terminal-header {
+  color: var(--neon-pink);
+}
+
+/* Cyber Stat Cards */
+.cyber-stat-card {
+  background: #090e1a;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.cyber-stat-card:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.cyber-stat-val {
+  font-family: var(--font-hud);
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 0.4rem;
+}
+
+/* Cyber Top 3 Podium */
+.podium-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  align-items: flex-end;
+}
+
+.podium-card {
+  background: #090e1a;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: center;
+  position: relative;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+}
+
+.podium-card-gold {
+  border-color: var(--neon-gold);
+  background: linear-gradient(180deg, #181504 0%, #090e1a 100%);
+  box-shadow: 0 0 25px rgba(234, 179, 8, 0.4), inset 0 0 15px rgba(234, 179, 8, 0.1);
+  transform: scale(1.05);
+  z-index: 3;
+}
+
+.podium-card-silver {
+  border-color: var(--neon-green);
+  background: linear-gradient(180deg, #041812 0%, #090e1a 100%);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), inset 0 0 12px rgba(16, 185, 129, 0.08);
+}
+
+.podium-card-bronze {
+  border-color: var(--neon-purple);
+  background: linear-gradient(180deg, #150524 0%, #090e1a 100%);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3), inset 0 0 12px rgba(168, 85, 247, 0.08);
+}
+
+.podium-rank-badge {
+  font-family: var(--font-hud);
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+/* Cyber HUD Badges */
+.hud-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-hud);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hud-tag-cyan {
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.hud-tag-pink {
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid var(--neon-pink);
+  color: var(--neon-pink);
+}
+
+.hud-tag-green {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid var(--neon-green);
+  color: var(--neon-green);
+}
+
+.hud-tag-gold {
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid var(--neon-gold);
+  color: var(--neon-gold);
+}
+
+/* Cyber Table */
+.cyber-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+}
+
+.cyber-table th {
+  font-family: var(--font-hud);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 0.85rem 1.2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cyber-table td {
+  background: #090e1a;
+  padding: 1rem 1.2rem;
+  font-size: 0.95rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cyber-table tr td:first-child {
+  border-top-left-radius: var(--radius-md);
+  border-bottom-left-radius: var(--radius-md);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cyber-table tr td:last-child {
+  border-top-right-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cyber-table tr:hover td {
+  background: #101729;
+}
+
+/* Progress bar inside Cyber HUD */
+.cyber-progress-track {
+  width: 100%;
+  height: 8px;
+  background: #050811;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 0.4rem;
+}
+
+.cyber-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+
+.cyber-progress-fill-pos {
+  background: linear-gradient(90deg, #059669, #10b981);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+
+.cyber-progress-fill-neg {
+  background: linear-gradient(90deg, #be185d, #ec4899);
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.6);
+}
+
 /* Responsive grid */
 @media (max-width: 992px) {
   .cards-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .podium-grid {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .podium-card-gold {
+    transform: none;
   }
 }
 
@@ -736,3 +985,4 @@ button, input, textarea, select {
     font-size: 1.8rem;
   }
 }
+
