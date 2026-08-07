@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Puzzle, Search, CheckCircle2, PlusCircle, Filter } from 'lucide-react';
+import { PixelTrophyGold, PixelTrophySilver, PixelTrophyBronze } from '../components/PixelIcons';
+import { Search } from 'lucide-react';
 
 export default function RiddlesPage() {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ export default function RiddlesPage() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all'); // all, solved, unsolved, my_riddles
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     async function fetchRiddles() {
@@ -27,14 +29,14 @@ export default function RiddlesPage() {
   }, []);
 
   const filteredRiddles = riddles.filter((riddle) => {
-    // Filtro per ricerca testuale
+    // Search query filter
     const matchesSearch = riddle.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           riddle.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           riddle.author_name.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
 
-    // Filtro per categoria
+    // Filter status
     if (filter === 'solved') return riddle.is_solved_by_current_user === 1;
     if (filter === 'unsolved') return riddle.is_solved_by_current_user !== 1;
     if (filter === 'my_riddles') return user && riddle.author_id === user.id;
@@ -42,129 +44,194 @@ export default function RiddlesPage() {
     return true;
   });
 
+  const getTierInfo = (index) => {
+    const tiers = [
+      {
+        name: 'ORO',
+        tierClass: 'tier-gold',
+        badgeClass: 'gold',
+        boxClass: 'gold-bg',
+        btnClass: 'card-btn-gold',
+        Icon: PixelTrophyGold
+      },
+      {
+        name: 'ARGENTO',
+        tierClass: 'tier-silver',
+        badgeClass: 'silver',
+        boxClass: 'silver-bg',
+        btnClass: 'card-btn-silver',
+        Icon: PixelTrophySilver
+      },
+      {
+        name: 'BRONZO',
+        tierClass: 'tier-bronze',
+        badgeClass: 'bronze',
+        boxClass: 'bronze-bg',
+        btnClass: 'card-btn-bronze',
+        Icon: PixelTrophyBronze
+      }
+    ];
+    return tiers[index % 3];
+  };
+
+  // Helper to format example box lines
+  const getExampleLines = (riddle) => {
+    if (!riddle.public_pos_example) return ['11234', '12336', '12345', '18789'];
+    const rawLines = riddle.public_pos_example.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    if (rawLines.length >= 3) return rawLines.slice(0, 4);
+    
+    // If single line, present neat variations or display line
+    const first = rawLines[0];
+    return [first, first, first, first];
+  };
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+      {/* Header Banner */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
         <div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Puzzle size={32} style={{ color: 'var(--primary)' }} /> Galleria Sfide
-          </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Esplora gli enigmi creati dalla community e prova a risolverli.</p>
+          <h1 className="page-title-neon">GALLERIA SFIDE</h1>
+          <p className="page-subtitle">Esplora gli enigmi creati dalla community e prova a risolverli.</p>
         </div>
 
+        <Link to="/create" className="btn btn-pill-pink">
+          CREA NUOVO ENIGMA
+        </Link>
+      </div>
+
+      {/* Filter Pills Bar */}
+      <div className="filter-pills-bar">
+        <button
+          className="pill-filter pill-filter-blue"
+          onClick={() => setShowSearch(!showSearch)}
+        >
+          FILTRI
+        </button>
+
+        <button
+          className={`pill-filter pill-filter-pink ${filter === 'all' ? 'active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          TUTTI ({riddles.length})
+        </button>
+
+        <button
+          className={`pill-filter pill-filter-cyan ${filter === 'unsolved' ? 'active' : ''}`}
+          onClick={() => setFilter('unsolved')}
+        >
+          DA RISOLVERE
+        </button>
+
+        <button
+          className={`pill-filter pill-filter-green ${filter === 'solved' ? 'active' : ''}`}
+          onClick={() => setFilter('solved')}
+        >
+          RISOLTI
+        </button>
+
         {user && (
-          <Link to="/create" className="btn btn-primary">
-            <PlusCircle size={18} /> Crea Nuovo Enigma
-          </Link>
+          <button
+            className={`pill-filter pill-filter-purple ${filter === 'my_riddles' ? 'active' : ''}`}
+            onClick={() => setFilter('my_riddles')}
+          >
+            I MIEI ENIGMI
+          </button>
         )}
       </div>
 
-      {/* Controlli Filtro e Ricerca */}
-      <div className="glass-card" style={{ marginBottom: '2rem', padding: '1.2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="form-control"
-              style={{ paddingLeft: '2.7rem' }}
-              placeholder="Cerca per titolo, descrizione o autore..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Filter size={16} style={{ color: 'var(--text-muted)', marginRight: '0.3rem' }} />
-            <button
-              className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setFilter('all')}
-            >
-              Tutti ({riddles.length})
-            </button>
-            {user && (
-              <>
-                <button
-                  className={`btn btn-sm ${filter === 'unsolved' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setFilter('unsolved')}
-                >
-                  Da Risolvere
-                </button>
-                <button
-                  className={`btn btn-sm ${filter === 'solved' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setFilter('solved')}
-                >
-                  Risolti
-                </button>
-                <button
-                  className={`btn btn-sm ${filter === 'my_riddles' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setFilter('my_riddles')}
-                >
-                  I Miei Enigmi
-                </button>
-              </>
-            )}
-          </div>
+      {/* Optional Search Bar toggle */}
+      {showSearch && (
+        <div style={{ marginBottom: '2rem', position: 'relative', maxWidth: '500px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            className="form-control"
+            style={{ paddingLeft: '2.7rem', borderRadius: '9999px', background: '#090e1a', borderColor: 'var(--neon-cyan)' }}
+            placeholder="Cerca per titolo, descrizione o autore..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      </div>
+      )}
 
       {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
-          Caricamento enigmi in corso...
+        <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)', fontFamily: 'var(--font-hud)' }}>
+          CARICAMENTO ENIGMI IN CORSO...
         </div>
       ) : filteredRiddles.length === 0 ? (
-        <div className="glass-card" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '1rem' }}>
+        <div className="glass-card" style={{ textAlign: 'center', padding: '3rem 1.5rem', borderRadius: '18px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '1.5rem' }}>
             Nessun enigma trovato per i filtri selezionati.
           </p>
           {user && (
-            <Link to="/create" className="btn btn-primary btn-sm">
-              Crea il primo enigma
+            <Link to="/create" className="btn btn-pill-pink">
+              CREA IL PRIMO ENIGMA
             </Link>
           )}
         </div>
       ) : (
-        <div className="grid-3">
-          {filteredRiddles.map((riddle) => (
-            <div key={riddle.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{riddle.title}</h2>
-                  {riddle.is_solved_by_current_user === 1 && (
-                    <span className="badge badge-emerald" title="Hai risolto questo enigma">
-                      <CheckCircle2 size={12} /> Risolto
-                    </span>
+        <div className="cards-grid">
+          {filteredRiddles.map((riddle, index) => {
+            const tier = getTierInfo(index);
+            const TrophyIcon = tier.Icon;
+            const exampleLines = getExampleLines(riddle);
+            const isSolved = riddle.is_solved_by_current_user === 1;
+
+            return (
+              <div key={riddle.id} className={`riddle-card ${tier.tierClass}`}>
+                {/* Top Notch Badge */}
+                <div className={`card-tier-badge ${tier.badgeClass}`}>
+                  <TrophyIcon />
+                  <span>{tier.name}</span>
+                </div>
+
+                {/* Card Content */}
+                <div>
+                  <h2 className="card-title">{riddle.title}</h2>
+
+                  {isSolved && (
+                    <div className="card-status-solved">
+                      RISOLTO
+                    </div>
                   )}
+
+                  <p className="card-description">
+                    {riddle.description.length > 100
+                      ? `${riddle.description.substring(0, 100)}...`
+                      : riddle.description}
+                  </p>
+
+                  {/* Code Example Box */}
+                  <div className={`card-example-box ${tier.boxClass}`}>
+                    <div className="example-label">Exemplo:</div>
+                    {exampleLines.map((line, lIdx) => (
+                      <div key={lIdx} className="example-line">
+                        {line}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginBottom: '1.2rem', minHeight: '42px' }}>
-                  {riddle.description.length > 110 ? `${riddle.description.substring(0, 110)}...` : riddle.description}
-                </p>
+                {/* Card Footer */}
+                <div>
+                  <div className="card-meta">
+                    <span>
+                      Autore: <strong className="highlight">{riddle.author_name}</strong>
+                    </span>
+                    <span>
+                      Risolto da: <strong className="highlight">{riddle.solved_by_count}</strong>
+                    </span>
+                  </div>
 
-                <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '1.2rem' }}>
-                  <div style={{ color: '#34d399', marginBottom: '0.25rem' }}>
-                    <strong>Esempio (+):</strong> <code>{riddle.public_pos_example}</code>
-                  </div>
-                  <div style={{ color: '#fb7185' }}>
-                    <strong>Esempio (-):</strong> <code>{riddle.public_neg_example}</code>
-                  </div>
+                  <Link to={`/riddles/${riddle.id}`} className={`card-btn ${tier.btnClass}`}>
+                    {isSolved ? 'VISUALIZZA DETTAGLI' : 'INIZIA SFIDA'}
+                  </Link>
                 </div>
               </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-                  <span>Autore: <strong>{riddle.author_name}</strong></span>
-                  <span>Risolto da: <strong>{riddle.solved_by_count}</strong></span>
-                </div>
-
-                <Link to={`/riddles/${riddle.id}`} className="btn btn-primary btn-sm" style={{ width: '100%' }}>
-                  {riddle.is_solved_by_current_user === 1 ? 'Visualizza Dettagli' : 'Gioca e Risolvi'}
-                </Link>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

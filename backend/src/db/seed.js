@@ -4,92 +4,99 @@ const bcrypt = require('bcryptjs');
 function seedDatabase() {
   console.log('🌱 Popolamento database con dati demo per la presentazione...');
 
-  // 1. Inserisci Utenti Demo
   const passHash = bcrypt.hashSync('Password123!', 10);
-  
+
+  // Clear existing tables for fresh seed matching screenshot
+  db.exec('DELETE FROM attempts');
+  db.exec('DELETE FROM riddle_control_strings');
+  db.exec('DELETE FROM riddles');
+  db.exec('DELETE FROM users');
+
+  // 1. Inserisci Utenti Demo
   const insertUser = db.prepare(`
-    INSERT OR IGNORE INTO users (id, username, email, password_hash)
+    INSERT INTO users (id, username, email, password_hash)
     VALUES (?, ?, ?, ?)
   `);
 
-  insertUser.run(1, 'prof_starace', 'prof@unina.it', passHash);
-  insertUser.run(2, 'regex_master', 'master@regexriddle.it', passHash);
-  insertUser.run(3, 'coder_student', 'student@unina.it', passHash);
+  insertUser.run(1, 'mario_dev', 'mario@regexriddle.it', passHash);
+  insertUser.run(2, 'luigi_code', 'luigi@regexriddle.it', passHash);
+  insertUser.run(3, 'peach_script', 'peach@regexriddle.it', passHash);
+  insertUser.run(4, 'gigi', 'gigi@regexriddle.it', passHash);
 
-  // 2. Inserisci Enigmi Demo
+  // 2. Inserisci Enigmi Demo (dallo screenshot del client)
   const insertRiddle = db.prepare(`
-    INSERT OR IGNORE INTO riddles (id, author_id, title, description, secret_regex, public_pos_example, public_neg_example)
+    INSERT INTO riddles (id, author_id, title, description, secret_regex, public_pos_example, public_neg_example)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   insertRiddle.run(
     1,
-    1,
-    'Validazione Indirizzo IP v4',
-    'Crea una regex che accetti un formato IP classico a 4 ottetti numerici separati da punti (es. 192.168.1.1).',
-    '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$',
-    '192.168.1.1',
-    '192.168.1'
+    1, // mario_dev
+    'SOLO NUMERI DI 4 CIFRE',
+    'Trova la regex che accetta esattamente 4 cifre numeriche.',
+    '^[0-9]{4}$',
+    '11234\n12336\n12345\n18789',
+    '123'
   );
 
   insertRiddle.run(
     2,
-    2,
-    'Codice Fiscale Italiano (Iniziale)',
-    'Crea una regex per la prima parte del Codice Fiscale: 6 lettere (cognome/nome) seguiti da 2 cifre numeriche dell\'anno.',
-    '^[A-Z]{6}[0-9]{2}$',
-    'RSSMRA85',
-    'RSMRA85'
+    2, // luigi_code
+    'MATCH EMAIL',
+    'Scrivi una regex per validare indirizzi email comuni.',
+    '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+    'luig@email.com\nluigi@email.com\nluigiemail.com\nluigi@email.com',
+    'luigiemail.com'
   );
 
   insertRiddle.run(
     3,
-    2,
-    'Formato Ora 24h (HH:MM)',
-    'Riconosci solo orari validi nel formato 24 ore da 00:00 a 23:59.',
-    '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$',
-    '14:30',
-    '25:61'
+    3, // peach_script
+    'HEX COLOR CODES',
+    'Crea una regex per i codici colore esadecimali (#RRGGBB).',
+    '^#[0-9a-fA-F]{6}$',
+    '#833255\n##89690\n#RRGGBB\n#RRGG8B',
+    '#833'
   );
 
   // 3. Inserisci Stringhe di Controllo Segrete
   const insertCS = db.prepare(`
-    INSERT OR IGNORE INTO riddle_control_strings (id, riddle_id, string_value, is_positive)
+    INSERT INTO riddle_control_strings (id, riddle_id, string_value, is_positive)
     VALUES (?, ?, ?, ?)
   `);
 
-  // Enigma 1 IP
-  insertCS.run(1, 1, '10.0.0.1', 1);
-  insertCS.run(2, 1, '172.16.254.1', 1);
-  insertCS.run(3, 1, '127.0.0.1', 1);
-  insertCS.run(4, 1, '256.1.1', 0);
-  insertCS.run(5, 1, 'abc.def.ghi.jkl', 0);
-  insertCS.run(6, 1, '192.168.1.1.1', 0);
+  // Enigma 1 (4 cifre)
+  insertCS.run(1, 1, '1234', 1);
+  insertCS.run(2, 1, '9999', 1);
+  insertCS.run(3, 1, '123', 0);
+  insertCS.run(4, 1, '12345', 0);
 
-  // Enigma 2 CF
-  insertCS.run(7, 2, 'DFLMRA98', 1);
-  insertCS.run(8, 2, 'BNCLSN01', 1);
-  insertCS.run(9, 2, 'ABCD12', 0);
-  insertCS.run(10, 2, 'ABCDEFGH', 0);
+  // Enigma 2 (Email)
+  insertCS.run(5, 2, 'user@test.com', 1);
+  insertCS.run(6, 2, 'admin@domain.it', 1);
+  insertCS.run(7, 2, 'invalidemail', 0);
 
-  // Enigma 3 Ora
-  insertCS.run(11, 3, '00:00', 1);
-  insertCS.run(12, 3, '23:59', 1);
-  insertCS.run(13, 3, '12:00', 1);
-  insertCS.run(14, 3, '24:00', 0);
-  insertCS.run(15, 3, '12:60', 0);
+  // Enigma 3 (Hex Color)
+  insertCS.run(8, 3, '#ff0000', 1);
+  insertCS.run(9, 3, '#00ff00', 1);
+  insertCS.run(10, 3, '123456', 0);
 
-  // 4. Inserisci Tentativi ed Enigmi Risolti per la Classifica Demo
+  // 4. Inserisci Tentativi per simulare Solved Count dallo screenshot
   const insertAttempt = db.prepare(`
-    INSERT OR IGNORE INTO attempts (id, user_id, riddle_id, proposed_regex, pos_passed_count, neg_passed_count, total_pos_count, total_neg_count, is_solved)
+    INSERT INTO attempts (id, user_id, riddle_id, proposed_regex, pos_passed_count, neg_passed_count, total_pos_count, total_neg_count, is_solved)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  insertAttempt.run(1, 3, 1, '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$', 3, 3, 3, 3, 1);
-  insertAttempt.run(2, 3, 2, '^[A-Z]{6}[0-9]{2}$', 2, 2, 2, 2, 1);
-  insertAttempt.run(3, 2, 1, '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$', 3, 3, 3, 3, 1);
+  // Riddle 1 (mario_dev) solved by 2 users (e.g. user 2 and user 4 "gigi")
+  insertAttempt.run(1, 2, 1, '^[0-9]{4}$', 2, 2, 2, 2, 1);
+  insertAttempt.run(2, 4, 1, '^[0-9]{4}$', 2, 2, 2, 2, 1); // Gigi solved it -> "RISOLTO" tag!
 
-  console.log('✅ Popolamento dati demo completato!');
+  // Riddle 3 (peach_script) solved by 5 attempts/users
+  insertAttempt.run(3, 1, 3, '^#[0-9a-fA-F]{6}$', 2, 1, 2, 1, 1);
+  insertAttempt.run(4, 2, 3, '^#[0-9a-fA-F]{6}$', 2, 1, 2, 1, 1);
+  insertAttempt.run(5, 4, 3, '^#[0-9a-fA-F]{6}$', 2, 1, 2, 1, 1);
+
+  console.log('✅ Popolamento dati demo completato con successo!');
 }
 
 seedDatabase();

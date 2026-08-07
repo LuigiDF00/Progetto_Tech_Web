@@ -13,7 +13,9 @@ function getGlobalLeaderboard() {
       u.username,
       u.avatar_url,
       COALESCE(solved.solved_count, 0) AS solved_count,
+      COALESCE(solved.solved_count, 0) AS riddles_solved,
       COALESCE(created.created_count, 0) AS created_count,
+      COALESCE(created.created_count, 0) AS riddles_created,
       COALESCE(attempts_stats.avg_attempts, 0) AS avg_attempts
     FROM users u
     LEFT JOIN (
@@ -61,11 +63,19 @@ function getUserStats(userId) {
 
   return {
     ...user,
+    riddles_solved: solvedCount,
+    riddles_created: createdCount,
+    solved_count: solvedCount,
+    created_count: createdCount,
+    total_attempts: totalAttempts,
+    avg_attempts: avgAttempts,
     stats: {
       solved_count: solvedCount,
       created_count: createdCount,
       total_attempts: totalAttempts,
-      avg_attempts: avgAttempts
+      avg_attempts: avgAttempts,
+      riddles_solved: solvedCount,
+      riddles_created: createdCount
     }
   };
 }
