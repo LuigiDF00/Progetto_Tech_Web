@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { Trophy, Award, Target } from 'lucide-react';
+import { LeaderboardEntry } from '../types';
+import { Trophy, Award } from 'lucide-react';
 
 export default function LeaderboardPage() {
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     async function fetchLeaderboard() {
       try {
         const data = await api.getLeaderboard();
         setLeaderboard(data.leaderboard || []);
-      } catch (err) {
-        setError(err.message);
+      } catch (err: any) {
+        setError(err.message || 'Errore nel caricamento classifica');
       } finally {
         setLoading(false);
       }
@@ -57,10 +58,11 @@ export default function LeaderboardPage() {
                   const isTop1 = rank === 1;
                   const isTop2 = rank === 2;
                   const isTop3 = rank === 3;
+                  const solved = item.riddles_solved ?? item.solved_count ?? 0;
 
                   return (
                     <tr
-                      key={item.id || index}
+                      key={item.user_id || index}
                       style={{
                         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
                         background: isTop1 ? 'rgba(245, 158, 11, 0.08)' : isTop2 ? 'rgba(148, 163, 184, 0.08)' : isTop3 ? 'rgba(180, 83, 9, 0.08)' : 'transparent'
@@ -83,12 +85,11 @@ export default function LeaderboardPage() {
                           )}
                           <div>
                             <div style={{ fontWeight: 700 }}>{item.username}</div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>{item.first_name} {item.last_name}</div>
                           </div>
                         </div>
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-                        {item.riddles_solved}
+                        {solved}
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 600, color: 'var(--accent-cyan)' }}>
                         {item.avg_attempts ? Number(item.avg_attempts).toFixed(1) : '-'}

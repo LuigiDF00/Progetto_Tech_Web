@@ -1,9 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { X, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
-export default function AuthModal({ isOpen, onClose, initialTab = 'login' }) {
-  const [tab, setTab] = useState(initialTab);
+interface AuthModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialTab?: 'login' | 'register';
+}
+
+export default function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalProps) {
+  const [tab, setTab] = useState<'login' | 'register'>(initialTab);
+
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    first_name: '',
+    last_name: '',
+    password: '',
+    emailOrUsername: ''
+  });
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const { login, register } = useAuth();
 
   useEffect(() => {
     setTab(initialTab);
@@ -18,26 +37,13 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }) {
     });
   }, [initialTab, isOpen]);
 
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    first_name: '',
-    last_name: '',
-    password: '',
-    emailOrUsername: ''
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const { login, register } = useAuth();
-
   if (!isOpen) return null;
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -49,14 +55,12 @@ export default function AuthModal({ isOpen, onClose, initialTab = 'login' }) {
         await register({
           username: formData.username,
           email: formData.email,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
           password: formData.password
         });
       }
       onClose();
-    } catch (err) {
-      setError(err.message);
+    } catch (err: any) {
+      setError(err.message || 'Si è verificato un errore');
     } finally {
       setLoading(false);
     }

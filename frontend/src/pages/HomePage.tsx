@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { Riddle } from '../types';
 import { Puzzle, Trophy, Terminal, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ riddlesCount: 0, totalSolved: 0 });
-  const [featuredRiddles, setFeaturedRiddles] = useState([]);
+  const [featuredRiddles, setFeaturedRiddles] = useState<Riddle[]>([]);
 
   useEffect(() => {
     async function loadData() {

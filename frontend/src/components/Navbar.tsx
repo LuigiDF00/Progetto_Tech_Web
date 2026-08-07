@@ -7,10 +7,10 @@ import { LogOut, LogIn } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authTab, setAuthTab] = useState('login');
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
 
-  const openAuth = (tab) => {
+  const openAuth = (tab: 'login' | 'register') => {
     setAuthTab(tab);
     setAuthModalOpen(true);
   };

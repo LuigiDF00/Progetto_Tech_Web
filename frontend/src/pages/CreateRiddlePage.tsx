@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -8,22 +8,19 @@ export default function CreateRiddlePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  const [title, setTitle] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [secretRegex, setSecretRegex] = useState<string>('');
+  const [publicPosExample, setPublicPosExample] = useState<string>('');
+  const [publicNegExample, setPublicNegExample] = useState<string>('');
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [secretRegex, setSecretRegex] = useState('');
-  const [publicPosExample, setPublicPosExample] = useState('');
-  const [publicNegExample, setPublicNegExample] = useState('');
+  const [controlPosStrings, setControlPosStrings] = useState<string[]>(['', '']);
+  const [controlNegStrings, setControlNegStrings] = useState<string[]>(['', '']);
 
-  // Liste dinamiche per stringhe di controllo (fino a 10 ciascuna)
-  const [controlPosStrings, setControlPosStrings] = useState(['', '']);
-  const [controlNegStrings, setControlNegStrings] = useState(['', '']);
+  const [error, setError] = useState<string>('');
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  // Gestione stringhe di controllo positive
-  const handlePosChange = (index, value) => {
+  const handlePosChange = (index: number, value: string) => {
     const updated = [...controlPosStrings];
     updated[index] = value;
     setControlPosStrings(updated);
@@ -31,12 +28,11 @@ export default function CreateRiddlePage() {
   const addPosString = () => {
     if (controlPosStrings.length < 10) setControlPosStrings([...controlPosStrings, '']);
   };
-  const removePosString = (index) => {
+  const removePosString = (index: number) => {
     if (controlPosStrings.length > 1) setControlPosStrings(controlPosStrings.filter((_, i) => i !== index));
   };
 
-  // Gestione stringhe di controllo negative
-  const handleNegChange = (index, value) => {
+  const handleNegChange = (index: number, value: string) => {
     const updated = [...controlNegStrings];
     updated[index] = value;
     setControlNegStrings(updated);
@@ -44,15 +40,14 @@ export default function CreateRiddlePage() {
   const addNegString = () => {
     if (controlNegStrings.length < 10) setControlNegStrings([...controlNegStrings, '']);
   };
-  const removeNegString = (index) => {
+  const removeNegString = (index: number) => {
     if (controlNegStrings.length > 1) setControlNegStrings(controlNegStrings.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Pre-validazione front-end basilare
     const posFiltered = controlPosStrings.map(s => s.trim()).filter(Boolean);
     const negFiltered = controlNegStrings.map(s => s.trim()).filter(Boolean);
 
@@ -74,8 +69,8 @@ export default function CreateRiddlePage() {
       });
 
       navigate(`/riddles/${result.riddle_id}`);
-    } catch (err) {
-      setError(err.message);
+    } catch (err: any) {
+      setError(err.message || 'Errore nella creazione dell\'enigma');
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +82,6 @@ export default function CreateRiddlePage() {
 
   if (!user) {
     return (
-
       <div className="glass-card" style={{ textAlign: 'center', padding: '3rem 1.5rem', maxWidth: '600px', margin: '0 auto' }}>
         <AlertCircle size={40} style={{ color: 'var(--accent-amber)', marginBottom: '1rem' }} />
         <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Accesso Richiesto</h2>

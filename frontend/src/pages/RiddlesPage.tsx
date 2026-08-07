@@ -2,25 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { Riddle } from '../types';
 import { PixelTrophyGold, PixelTrophySilver, PixelTrophyBronze } from '../components/PixelIcons';
 import { Search } from 'lucide-react';
 
 export default function RiddlesPage() {
   const { user } = useAuth();
-  const [riddles, setRiddles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('all'); // all, solved, unsolved, my_riddles
-  const [showSearch, setShowSearch] = useState(false);
+  const [riddles, setRiddles] = useState<Riddle[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filter, setFilter] = useState<'all' | 'solved' | 'unsolved' | 'my_riddles'>('all');
+  const [showSearch, setShowSearch] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchRiddles() {
       try {
         const data = await api.getRiddles();
         setRiddles(data.riddles || []);
-      } catch (err) {
-        setError(err.message);
+      } catch (err: any) {
+        setError(err.message || 'Errore nel caricamento enigmi');
       } finally {
         setLoading(false);
       }
@@ -29,22 +30,20 @@ export default function RiddlesPage() {
   }, []);
 
   const filteredRiddles = riddles.filter((riddle) => {
-    // Search query filter
     const matchesSearch = riddle.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           riddle.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           riddle.author_name.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
 
-    // Filter status
-    if (filter === 'solved') return riddle.is_solved_by_current_user === 1;
-    if (filter === 'unsolved') return riddle.is_solved_by_current_user !== 1;
+    if (filter === 'solved') return Number(riddle.is_solved_by_current_user) === 1;
+    if (filter === 'unsolved') return Number(riddle.is_solved_by_current_user) !== 1;
     if (filter === 'my_riddles') return user && riddle.author_id === user.id;
 
     return true;
   });
 
-  const getTierInfo = (index) => {
+  const getTierInfo = (index: number) => {
     const tiers = [
       {
         name: 'ORO',
@@ -74,14 +73,12 @@ export default function RiddlesPage() {
     return tiers[index % 3];
   };
 
-  // Helper to format example box lines
-  const getExampleLines = (riddle) => {
+  const getExampleLines = (riddle: Riddle) => {
     if (!riddle.public_pos_example) return ['11234', '12336', '12345', '18789'];
     const rawLines = riddle.public_pos_example.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
     if (rawLines.length >= 3) return rawLines.slice(0, 4);
     
-    // If single line, present neat variations or display line
-    const first = rawLines[0];
+    const first = rawLines[0] || '1234';
     return [first, first, first, first];
   };
 
@@ -177,7 +174,7 @@ export default function RiddlesPage() {
             const tier = getTierInfo(index);
             const TrophyIcon = tier.Icon;
             const exampleLines = getExampleLines(riddle);
-            const isSolved = riddle.is_solved_by_current_user === 1;
+            const isSolved = Number(riddle.is_solved_by_current_user) === 1;
 
             return (
               <div key={riddle.id} className={`riddle-card ${tier.tierClass}`}>
@@ -221,7 +218,7 @@ export default function RiddlesPage() {
                       Autore: <strong className="highlight">{riddle.author_name}</strong>
                     </span>
                     <span>
-                      Risolto da: <strong className="highlight">{riddle.solved_by_count}</strong>
+                      Risolto da: <strong className="highlight">{riddle.solved_by_count ?? 0}</strong>
                     </span>
                   </div>
 

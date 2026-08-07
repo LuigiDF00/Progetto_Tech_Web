@@ -1,14 +1,24 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from '../services/api';
+import { User } from '../types';
 
-const AuthContext = createContext(null);
+export interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  login: (emailOrUsername: string, password: string) => Promise<any>;
+  register: (userData: { username: string; email: string; password: string }) => Promise<any>;
+  logout: () => void;
+  updateUserProfile: (updatedUser: Partial<User>) => void;
+}
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-  // Carica il profilo utente all'avvio se c'è un token salvato
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [loading, setLoading] = useState<boolean>(true);
+
   useEffect(() => {
     async function loadUser() {
       if (!token) {
@@ -22,7 +32,6 @@ export function AuthProvider({ children }) {
         setUser(data.user);
       } catch (err) {
         console.error('Errore nel recupero della sessione utente:', err);
-        // Token non valido o scaduto
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
@@ -34,7 +43,7 @@ export function AuthProvider({ children }) {
     loadUser();
   }, [token]);
 
-  const login = async (emailOrUsername, password) => {
+  const login = async (emailOrUsername: string, password: string) => {
     const data = await api.login({ emailOrUsername, password });
     localStorage.setItem('token', data.token);
     setToken(data.token);
@@ -42,7 +51,7 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const register = async (userData) => {
+  const register = async (userData: { username: string; email: string; password: string }) => {
     const data = await api.register(userData);
     localStorage.setItem('token', data.token);
     setToken(data.token);
@@ -56,8 +65,8 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const updateUserProfile = (updatedUser) => {
-    setUser((prev) => ({ ...prev, ...updatedUser }));
+  const updateUserProfile = (updatedUser: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedUser } : null));
   };
 
   return (
@@ -67,7 +76,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth deve essere usato all\'interno di AuthProvider');

@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { User, Upload, CheckCircle2, AlertCircle, Trophy, Puzzle, History } from 'lucide-react';
+import { User as UserType } from '../types';
 
 export default function ProfilePage() {
   const { user, loading: authLoading, updateUserProfile } = useAuth();
-  const [profileStats, setProfileStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [profileStats, setProfileStats] = useState<UserType | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
 
-  
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState('');
-  const [uploadError, setUploadError] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadMessage, setUploadMessage] = useState<string>('');
+  const [uploadError, setUploadError] = useState<string>('');
 
   useEffect(() => {
     async function fetchProfileData() {
@@ -22,8 +22,8 @@ export default function ProfilePage() {
       try {
         const data = await api.getProfile();
         setProfileStats(data.user);
-      } catch (err) {
-        setError(err.message);
+      } catch (err: any) {
+        setError(err.message || 'Errore nel caricamento del profilo');
       } finally {
         setLoading(false);
       }
@@ -31,8 +31,8 @@ export default function ProfilePage() {
     fetchProfileData();
   }, [user]);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
@@ -41,7 +41,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAvatarUpload = async (e) => {
+  const handleAvatarUpload = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedFile) return;
 
@@ -56,12 +56,11 @@ export default function ProfilePage() {
       const response = await api.uploadAvatar(formData);
       setUploadMessage('Avatar caricato con successo!');
       
-      // Aggiorna sia AuthContext che lo stato locale
       updateUserProfile({ avatar_url: response.avatar_url });
       setProfileStats((prev) => prev ? { ...prev, avatar_url: response.avatar_url } : null);
       setSelectedFile(null);
-    } catch (err) {
-      setUploadError(err.message);
+    } catch (err: any) {
+      setUploadError(err.message || 'Errore nel caricamento avatar');
     } finally {
       setUploading(false);
     }
@@ -73,7 +72,6 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-
       <div className="glass-card" style={{ textAlign: 'center', padding: '3rem 1.5rem', maxWidth: '600px', margin: '0 auto' }}>
         <AlertCircle size={40} style={{ color: 'var(--accent-amber)', marginBottom: '1rem' }} />
         <h2>Accesso Richiesto</h2>
@@ -82,15 +80,18 @@ export default function ProfilePage() {
     );
   }
 
+  const riddlesCreated = profileStats?.riddles_created ?? profileStats?.created_count ?? profileStats?.stats?.created_count ?? 0;
+  const riddlesSolved = profileStats?.riddles_solved ?? profileStats?.solved_count ?? profileStats?.stats?.solved_count ?? 0;
+  const avgAttempts = profileStats?.avg_attempts ?? profileStats?.stats?.avg_attempts;
+
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       <div className="glass-card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-          {/* Avatar Display */}
           <div style={{ position: 'relative' }}>
             {previewUrl || (profileStats && profileStats.avatar_url) || user.avatar_url ? (
               <img
-                src={previewUrl || (profileStats && profileStats.avatar_url) || user.avatar_url}
+                src={previewUrl || (profileStats && profileStats.avatar_url) || user.avatar_url || ''}
                 alt={user.username}
                 className="avatar-img"
                 style={{ width: '90px', height: '90px', borderWidth: '3px' }}
@@ -104,12 +105,11 @@ export default function ProfilePage() {
 
           <div>
             <h1 style={{ fontSize: '2.2rem', fontWeight: 800 }}>
-              {user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.username}
+              {user.username}
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>@{user.username} • {user.email}</p>
             <span className="badge badge-indigo" style={{ marginTop: '0.5rem' }}>Utente Registrato</span>
           </div>
-
         </div>
       </div>
 
@@ -169,14 +169,14 @@ export default function ProfilePage() {
                 <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Puzzle size={16} /> Enigmi Creati
                 </span>
-                <strong style={{ fontSize: '1.1rem', color: 'var(--primary)' }}>{profileStats.riddles_created || 0}</strong>
+                <strong style={{ fontSize: '1.1rem', color: 'var(--primary)' }}>{riddlesCreated}</strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: '#090d16', borderRadius: 'var(--radius-sm)' }}>
                 <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <CheckCircle2 size={16} /> Enigmi Risolti
                 </span>
-                <strong style={{ fontSize: '1.1rem', color: 'var(--accent-emerald)' }}>{profileStats.riddles_solved || 0}</strong>
+                <strong style={{ fontSize: '1.1rem', color: 'var(--accent-emerald)' }}>{riddlesSolved}</strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: '#090d16', borderRadius: 'var(--radius-sm)' }}>
@@ -184,7 +184,7 @@ export default function ProfilePage() {
                   <History size={16} /> Tentativi Medi per Enigma
                 </span>
                 <strong style={{ fontSize: '1.1rem', color: 'var(--accent-cyan)' }}>
-                  {profileStats.avg_attempts ? Number(profileStats.avg_attempts).toFixed(1) : '-'}
+                  {avgAttempts ? Number(avgAttempts).toFixed(1) : '-'}
                 </strong>
               </div>
             </div>

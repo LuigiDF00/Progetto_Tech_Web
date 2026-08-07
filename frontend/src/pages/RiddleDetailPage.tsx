@@ -1,31 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, FormEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { Riddle, Attempt } from '../types';
 import { Terminal, Send, CheckCircle2, XCircle, AlertCircle, ArrowLeft, History, Sparkles } from 'lucide-react';
 
 export default function RiddleDetailPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
 
-  const [riddle, setRiddle] = useState(null);
-  const [attempts, setAttempts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [riddle, setRiddle] = useState<Riddle | null>(null);
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
   
-  const [proposedRegex, setProposedRegex] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [attemptFeedback, setAttemptFeedback] = useState(null);
-  const [submitError, setSubmitError] = useState('');
+  const [proposedRegex, setProposedRegex] = useState<string>('');
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [attemptFeedback, setAttemptFeedback] = useState<{ message: string; result: Attempt } | null>(null);
+  const [submitError, setSubmitError] = useState<string>('');
 
   useEffect(() => {
     async function loadRiddle() {
+      if (!id) return;
       try {
         const data = await api.getRiddleById(id);
         setRiddle(data.riddle);
         setAttempts(data.attempts || []);
-      } catch (err) {
-        setError(err.message);
+      } catch (err: any) {
+        setError(err.message || 'Errore nel caricamento enigma');
       } finally {
         setLoading(false);
       }
@@ -33,9 +35,9 @@ export default function RiddleDetailPage() {
     loadRiddle();
   }, [id]);
 
-  const handleSubmitAttempt = async (e) => {
+  const handleSubmitAttempt = async (e: FormEvent) => {
     e.preventDefault();
-    if (!proposedRegex.trim()) return;
+    if (!id || !proposedRegex.trim()) return;
 
     setSubmitting(true);
     setSubmitError('');
@@ -45,12 +47,11 @@ export default function RiddleDetailPage() {
       const data = await api.submitAttempt(id, proposedRegex);
       setAttemptFeedback(data);
 
-      // Ricarica la lista dei tentativi e lo stato aggiornato
       const updatedData = await api.getRiddleById(id);
       setRiddle(updatedData.riddle);
       setAttempts(updatedData.attempts || []);
-    } catch (err) {
-      setSubmitError(err.message);
+    } catch (err: any) {
+      setSubmitError(err.message || 'Errore nell\'invio del tentativo');
     } finally {
       setSubmitting(false);
     }
@@ -59,7 +60,6 @@ export default function RiddleDetailPage() {
   if (loading || authLoading) {
     return <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>Caricamento enigma in corso...</div>;
   }
-
 
   if (error || !riddle) {
     return (
@@ -209,7 +209,7 @@ export default function RiddleDetailPage() {
                   <span style={{ fontSize: '0.85rem', color: '#fb7185' }}>
                     Neg: {att.neg_passed_count}/{att.total_neg_count}
                   </span>
-                  {att.is_solved === 1 ? (
+                  {Number(att.is_solved) === 1 || att.is_solved === true ? (
                     <span className="badge badge-emerald">Risolto</span>
                   ) : (
                     <span className="badge badge-rose">Errato</span>
