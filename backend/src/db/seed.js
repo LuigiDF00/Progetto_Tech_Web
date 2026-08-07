@@ -1,102 +1,107 @@
-const db = require('./database');
+const { sequelize, User, Riddle, ControlString, Attempt } = require('../models');
 const bcrypt = require('bcryptjs');
 
-function seedDatabase() {
-  console.log('🌱 Popolamento database con dati demo per la presentazione...');
+async function seedDatabase() {
+  console.log('🌱 Popolamento database con dati demo per la presentazione (Sequelize ORM)...');
+
+  // Sync models with DB (force: true drops and recreates tables)
+  await sequelize.sync({ force: true });
 
   const passHash = bcrypt.hashSync('Password123!', 10);
 
-  // Clear existing tables for fresh seed matching screenshot
-  db.exec('DELETE FROM attempts');
-  db.exec('DELETE FROM riddle_control_strings');
-  db.exec('DELETE FROM riddles');
-  db.exec('DELETE FROM users');
-
   // 1. Inserisci Utenti Demo
-  const insertUser = db.prepare(`
-    INSERT INTO users (id, username, email, password_hash)
-    VALUES (?, ?, ?, ?)
-  `);
+  const mario = await User.create({
+    id: 1,
+    username: 'mario_dev',
+    email: 'mario@regexriddle.it',
+    password_hash: passHash
+  });
 
-  insertUser.run(1, 'mario_dev', 'mario@regexriddle.it', passHash);
-  insertUser.run(2, 'luigi_code', 'luigi@regexriddle.it', passHash);
-  insertUser.run(3, 'peach_script', 'peach@regexriddle.it', passHash);
-  insertUser.run(4, 'gigi', 'gigi@regexriddle.it', passHash);
+  const luigi = await User.create({
+    id: 2,
+    username: 'luigi_code',
+    email: 'luigi@regexriddle.it',
+    password_hash: passHash
+  });
 
-  // 2. Inserisci Enigmi Demo (dallo screenshot del client)
-  const insertRiddle = db.prepare(`
-    INSERT INTO riddles (id, author_id, title, description, secret_regex, public_pos_example, public_neg_example)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
+  const peach = await User.create({
+    id: 3,
+    username: 'peach_script',
+    email: 'peach@regexriddle.it',
+    password_hash: passHash
+  });
 
-  insertRiddle.run(
-    1,
-    1, // mario_dev
-    'SOLO NUMERI DI 4 CIFRE',
-    'Trova la regex che accetta esattamente 4 cifre numeriche.',
-    '^[0-9]{4}$',
-    '11234\n12336\n12345\n18789',
-    '123'
-  );
+  const gigi = await User.create({
+    id: 4,
+    username: 'gigi',
+    email: 'gigi@regexriddle.it',
+    password_hash: passHash
+  });
 
-  insertRiddle.run(
-    2,
-    2, // luigi_code
-    'MATCH EMAIL',
-    'Scrivi una regex per validare indirizzi email comuni.',
-    '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
-    'luig@email.com\nluigi@email.com\nluigiemail.com\nluigi@email.com',
-    'luigiemail.com'
-  );
+  // 2. Inserisci Enigmi Demo
+  const riddle1 = await Riddle.create({
+    id: 1,
+    author_id: mario.id,
+    title: 'SOLO NUMERI DI 4 CIFRE',
+    description: 'Trova la regex che accetta esattamente 4 cifre numeriche.',
+    secret_regex: '^[0-9]{4}$',
+    public_pos_example: '11234\n12336\n12345\n18789',
+    public_neg_example: '123'
+  });
 
-  insertRiddle.run(
-    3,
-    3, // peach_script
-    'HEX COLOR CODES',
-    'Crea una regex per i codici colore esadecimali (#RRGGBB).',
-    '^#[0-9a-fA-F]{6}$',
-    '#833255\n##89690\n#RRGGBB\n#RRGG8B',
-    '#833'
-  );
+  const riddle2 = await Riddle.create({
+    id: 2,
+    author_id: luigi.id,
+    title: 'MATCH EMAIL',
+    description: 'Scrivi una regex per validare indirizzi email comuni.',
+    secret_regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+    public_pos_example: 'luig@email.com\nluigi@email.com\nluigiemail.com\nluigi@email.com',
+    public_neg_example: 'luigiemail.com'
+  });
 
-  // 3. Inserisci Stringhe di Controllo Segrete
-  const insertCS = db.prepare(`
-    INSERT INTO riddle_control_strings (id, riddle_id, string_value, is_positive)
-    VALUES (?, ?, ?, ?)
-  `);
+  const riddle3 = await Riddle.create({
+    id: 3,
+    author_id: peach.id,
+    title: 'HEX COLOR CODES',
+    description: 'Crea una regex per i codici colore esadecimali (#RRGGBB).',
+    secret_regex: '^#[0-9a-fA-F]{6}$',
+    public_pos_example: '#833255\n##89690\n#RRGGBB\n#RRGG8B',
+    public_neg_example: '#833'
+  });
 
-  // Enigma 1 (4 cifre)
-  insertCS.run(1, 1, '1234', 1);
-  insertCS.run(2, 1, '9999', 1);
-  insertCS.run(3, 1, '123', 0);
-  insertCS.run(4, 1, '12345', 0);
+  // 3. Stringhe di controllo
+  await ControlString.bulkCreate([
+    { id: 1, riddle_id: riddle1.id, string_value: '1234', is_positive: 1 },
+    { id: 2, riddle_id: riddle1.id, string_value: '9999', is_positive: 1 },
+    { id: 3, riddle_id: riddle1.id, string_value: '123', is_positive: 0 },
+    { id: 4, riddle_id: riddle1.id, string_value: '12345', is_positive: 0 },
 
-  // Enigma 2 (Email)
-  insertCS.run(5, 2, 'user@test.com', 1);
-  insertCS.run(6, 2, 'admin@domain.it', 1);
-  insertCS.run(7, 2, 'invalidemail', 0);
+    { id: 5, riddle_id: riddle2.id, string_value: 'user@test.com', is_positive: 1 },
+    { id: 6, riddle_id: riddle2.id, string_value: 'admin@domain.it', is_positive: 1 },
+    { id: 7, riddle_id: riddle2.id, string_value: 'invalidemail', is_positive: 0 },
 
-  // Enigma 3 (Hex Color)
-  insertCS.run(8, 3, '#ff0000', 1);
-  insertCS.run(9, 3, '#00ff00', 1);
-  insertCS.run(10, 3, '123456', 0);
+    { id: 8, riddle_id: riddle3.id, string_value: '#ff0000', is_positive: 1 },
+    { id: 9, riddle_id: riddle3.id, string_value: '#00ff00', is_positive: 1 },
+    { id: 10, riddle_id: riddle3.id, string_value: '123456', is_positive: 0 }
+  ]);
 
-  // 4. Inserisci Tentativi per simulare Solved Count dallo screenshot
-  const insertAttempt = db.prepare(`
-    INSERT INTO attempts (id, user_id, riddle_id, proposed_regex, pos_passed_count, neg_passed_count, total_pos_count, total_neg_count, is_solved)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  // 4. Tentativi Demo
+  await Attempt.bulkCreate([
+    { id: 1, user_id: luigi.id, riddle_id: riddle1.id, proposed_regex: '^[0-9]{4}$', pos_passed_count: 2, neg_passed_count: 2, total_pos_count: 2, total_neg_count: 2, is_solved: 1 },
+    { id: 2, user_id: gigi.id, riddle_id: riddle1.id, proposed_regex: '^[0-9]{4}$', pos_passed_count: 2, neg_passed_count: 2, total_pos_count: 2, total_neg_count: 2, is_solved: 1 },
+    { id: 3, user_id: mario.id, riddle_id: riddle3.id, proposed_regex: '^#[0-9a-fA-F]{6}$', pos_passed_count: 2, neg_passed_count: 1, total_pos_count: 2, total_neg_count: 1, is_solved: 1 },
+    { id: 4, user_id: luigi.id, riddle_id: riddle3.id, proposed_regex: '^#[0-9a-fA-F]{6}$', pos_passed_count: 2, neg_passed_count: 1, total_pos_count: 2, total_neg_count: 1, is_solved: 1 },
+    { id: 5, user_id: gigi.id, riddle_id: riddle3.id, proposed_regex: '^#[0-9a-fA-F]{6}$', pos_passed_count: 2, neg_passed_count: 1, total_pos_count: 2, total_neg_count: 1, is_solved: 1 }
+  ]);
 
-  // Riddle 1 (mario_dev) solved by 2 users (e.g. user 2 and user 4 "gigi")
-  insertAttempt.run(1, 2, 1, '^[0-9]{4}$', 2, 2, 2, 2, 1);
-  insertAttempt.run(2, 4, 1, '^[0-9]{4}$', 2, 2, 2, 2, 1); // Gigi solved it -> "RISOLTO" tag!
-
-  // Riddle 3 (peach_script) solved by 5 attempts/users
-  insertAttempt.run(3, 1, 3, '^#[0-9a-fA-F]{6}$', 2, 1, 2, 1, 1);
-  insertAttempt.run(4, 2, 3, '^#[0-9a-fA-F]{6}$', 2, 1, 2, 1, 1);
-  insertAttempt.run(5, 4, 3, '^#[0-9a-fA-F]{6}$', 2, 1, 2, 1, 1);
-
-  console.log('✅ Popolamento dati demo completato con successo!');
+  console.log('✅ Popolamento dati demo con Sequelize completato con successo!');
 }
 
-seedDatabase();
+if (require.main === module) {
+  seedDatabase().catch(err => {
+    console.error('❌ Errore durante il seeding:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = seedDatabase;

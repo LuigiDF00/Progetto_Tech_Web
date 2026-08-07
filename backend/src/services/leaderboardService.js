@@ -1,68 +1,113 @@
-const db = require('../db/database');
+const { User, Riddle, Attempt } = require('../models');
 
 /**
- * Calcola e restituisce la classifica globale degli utenti.
+ * Calcola e restituisce la classifica globale degli utenti tramite Sequelize Models.
  * Ordinata per:
  * 1. Numero di enigmi unici risolti (DESC)
  * 2. Minor numero medio di tentativi impiegati per enigma (ASC)
+ * 3. Username (ASC)
  */
-function getGlobalLeaderboard() {
-  const query = `
-    SELECT 
-      u.id AS user_id,
-      u.username,
-      u.avatar_url,
-      COALESCE(solved.solved_count, 0) AS solved_count,
-      COALESCE(solved.solved_count, 0) AS riddles_solved,
-      COALESCE(created.created_count, 0) AS created_count,
-      COALESCE(created.created_count, 0) AS riddles_created,
-      COALESCE(attempts_stats.avg_attempts, 0) AS avg_attempts
-    FROM users u
-    LEFT JOIN (
-      SELECT user_id, COUNT(DISTINCT riddle_id) AS solved_count
-      FROM attempts
-      WHERE is_solved = 1
-      GROUP BY user_id
-    ) solved ON u.id = solved.user_id
-    LEFT JOIN (
-      SELECT author_id, COUNT(id) AS created_count
-      FROM riddles
-      GROUP BY author_id
-    ) created ON u.id = created.author_id
-    LEFT JOIN (
-      SELECT user_id, ROUND(CAST(COUNT(id) AS FLOAT) / COUNT(DISTINCT riddle_id), 2) AS avg_attempts
-      FROM attempts
-      GROUP BY user_id
-    ) attempts_stats ON u.id = attempts_stats.user_id
-    ORDER BY solved_count DESC, avg_attempts ASC, username ASC
-  `;
+async function getGlobalLeaderboard() {
+  const users = await User.findAll({
+    include: [
+      {
+        model: Riddle,
+        as: 'riddles',
+        attributes: ['id']
+      },
+      {
+        model: Attempt,
+        as: 'attempts',
+        attributes: ['id', 'riddle_id', 'is_solved']
+      }
+    ]
+  });
 
-  return db.prepare(query).all();
+  const leaderboard = users.map(user => {
+    const attempts = user.attempts || [];
+    const riddles = user.riddles || [];
+    const solvedAttempts = attempts.filter(a => a.is_solved === 1);
+    
+    // Set degli ID degli enigmi unici risolti
+    const uniqueSolvedRiddleIds = new Set(solvedAttempts.map(a => a.riddle_id));
+    const solvedCount = uniqueSolvedRiddleIds.size;
+    const createdCount = riddles.length;
+
+    // Calcolo tentativi medi
+    let avgAttempts = 0;
+    if (uniqueSolvedRiddleIds.size > 0) {
+      avgAttempts = Number((attempts.length / uniqueSolvedRiddleIds.size).toFixed(2));
+    } else if (attempts.length > 0) {
+      avgAttempts = attempts.length;
+    }
+
+    return {
+      user_id: user.id,
+      username: user.username,
+      avatar_url: user.avatar_url,
+      solved_count: solvedCount,
+      riddles_solved: solvedCount,
+      created_count: createdCount,
+      riddles_created: createdCount,
+      avg_attempts: avgAttempts
+    };
+  });
+
+  // Ordinamento
+  leaderboard.sort((a, b) => {
+    if (b.solved_count !== a.solved_count) {
+      return b.solved_count - a.solved_count;
+    }
+    if (a.avg_attempts !== b.avg_attempts) {
+      return a.avg_attempts - b.avg_attempts;
+    }
+    return a.username.localeCompare(b.username);
+  });
+
+  return leaderboard;
 }
 
 /**
- * Restituisce le statistiche dettagliate di un singolo utente
+ * Restituisce le statistiche dettagliate di un singolo utente tramite Sequelize Models
  */
-function getUserStats(userId) {
-  const user = db.prepare('SELECT id, username, email, avatar_url, created_at FROM users WHERE id = ?').get(userId);
+async function getUserStats(userId) {
+  const user = await User.findByPk(userId, {
+    attributes: ['id', 'username', 'email', 'avatar_url', 'created_at'],
+    include: [
+      {
+        model: Riddle,
+        as: 'riddles',
+        attributes: ['id']
+      },
+      {
+        model: Attempt,
+        as: 'attempts',
+        attributes: ['id', 'riddle_id', 'is_solved']
+      }
+    ]
+  });
+
   if (!user) return null;
 
-  const solvedCount = db.prepare(`
-    SELECT COUNT(DISTINCT riddle_id) as count FROM attempts WHERE user_id = ? AND is_solved = 1
-  `).get(userId).count;
+  const attempts = user.attempts || [];
+  const riddles = user.riddles || [];
+  const solvedAttempts = attempts.filter(a => a.is_solved === 1);
 
-  const createdCount = db.prepare(`
-    SELECT COUNT(id) as count FROM riddles WHERE author_id = ?
-  `).get(userId).count;
+  const uniqueSolvedRiddleIds = new Set(solvedAttempts.map(a => a.riddle_id));
+  const solvedCount = uniqueSolvedRiddleIds.size;
+  const createdCount = riddles.length;
+  const totalAttempts = attempts.length;
 
-  const totalAttempts = db.prepare(`
-    SELECT COUNT(id) as count FROM attempts WHERE user_id = ?
-  `).get(userId).count;
+  const avgAttempts = solvedCount > 0 
+    ? Number((totalAttempts / solvedCount).toFixed(2)) 
+    : (totalAttempts > 0 ? totalAttempts : 0);
 
-  const avgAttempts = solvedCount > 0 ? Number((totalAttempts / solvedCount).toFixed(2)) : (totalAttempts > 0 ? totalAttempts : 0);
+  const userJson = user.toJSON();
+  delete userJson.riddles;
+  delete userJson.attempts;
 
   return {
-    ...user,
+    ...userJson,
     riddles_solved: solvedCount,
     riddles_created: createdCount,
     solved_count: solvedCount,

@@ -1,18 +1,15 @@
 const request = require('supertest');
 const app = require('../src/app');
-const db = require('../src/db/database');
+const { sequelize } = require('../src/models');
 
-describe('RegexRiddle REST API & E2E Tests', () => {
+describe('RegexRiddle REST API & E2E Tests (Sequelize ORM)', () => {
   let userToken;
   let userId;
   let riddleId;
 
   // Clean DB tables before running tests
-  beforeAll(() => {
-    db.prepare('DELETE FROM attempts').run();
-    db.prepare('DELETE FROM riddle_control_strings').run();
-    db.prepare('DELETE FROM riddles').run();
-    db.prepare('DELETE FROM users').run();
+  beforeAll(async () => {
+    await sequelize.sync({ force: true });
   });
 
   test('1. GET /api/health deve restituire status ok', async () => {

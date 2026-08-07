@@ -1,9 +1,10 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db/database');
+const { Op } = require('sequelize');
+const { User } = require('../models');
 const { JWT_SECRET } = require('../middlewares/authMiddleware');
 
-function register(req, res, next) {
+async function register(req, res, next) {
   try {
     const { username, email, password } = req.body;
 
@@ -11,7 +12,10 @@ function register(req, res, next) {
       return res.status(400).json({ error: 'Username, email e password sono obbligatori.' });
     }
 
-    if (username.trim().length < 3) {
+    const cleanUsername = username.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (cleanUsername.length < 3) {
       return res.status(400).json({ error: 'Lo username deve contenere almeno 3 caratteri.' });
     }
 
@@ -19,35 +23,44 @@ function register(req, res, next) {
       return res.status(400).json({ error: 'La password deve contenere almeno 6 caratteri.' });
     }
 
-    const existingUser = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username.trim(), email.trim().toLowerCase());
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [
+          { username: cleanUsername },
+          { email: cleanEmail }
+        ]
+      }
+    });
+
     if (existingUser) {
       return res.status(409).json({ error: 'Username o email già in uso.' });
     }
 
     const password_hash = bcrypt.hashSync(password, 10);
-    const stmt = db.prepare('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)');
-    const result = stmt.run(username.trim(), email.trim().toLowerCase(), password_hash);
-
-    const user = {
-      id: result.lastInsertRowid,
-      username: username.trim(),
-      email: email.trim().toLowerCase(),
-      avatar_url: null
-    };
+    const user = await User.create({
+      username: cleanUsername,
+      email: cleanEmail,
+      password_hash
+    });
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
       message: 'Registrazione avvenuta con successo.',
       token,
-      user
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar_url: user.avatar_url
+      }
     });
   } catch (err) {
     next(err);
   }
 }
 
-function login(req, res, next) {
+async function login(req, res, next) {
   try {
     const { usernameOrEmail, password } = req.body;
 
@@ -55,8 +68,15 @@ function login(req, res, next) {
       return res.status(400).json({ error: 'Inserisci username/email e password.' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE username = ? OR email = ?')
-      .get(usernameOrEmail.trim(), usernameOrEmail.trim().toLowerCase());
+    const queryStr = usernameOrEmail.trim();
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { username: queryStr },
+          { email: queryStr.toLowerCase() }
+        ]
+      }
+    });
 
     if (!user) {
       return res.status(401).json({ error: 'Credenziali non valide.' });
@@ -84,12 +104,16 @@ function login(req, res, next) {
   }
 }
 
-function me(req, res, next) {
+async function me(req, res, next) {
   try {
-    const user = db.prepare('SELECT id, username, email, avatar_url, created_at FROM users WHERE id = ?').get(req.user.id);
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'username', 'email', 'avatar_url', 'created_at']
+    });
+
     if (!user) {
       return res.status(404).json({ error: 'Utente non trovato.' });
     }
+
     res.json({ user });
   } catch (err) {
     next(err);

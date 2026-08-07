@@ -1,7 +1,8 @@
-const db = require('../db/database');
+const { sequelize, Riddle, ControlString, Attempt, User } = require('../models');
 const regexService = require('../services/regexService');
 
-function createRiddle(req, res, next) {
+async function createRiddle(req, res, next) {
+  const transaction = await sequelize.transaction();
   try {
     const {
       title,
@@ -14,160 +15,178 @@ function createRiddle(req, res, next) {
     } = req.body;
 
     if (!title || !description || !secret_regex || public_pos_example === undefined || public_neg_example === undefined) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'Tutti i campi principali dell\'enigma sono obbligatori.' });
     }
 
-    // Valida la sintassi della Regex segreta fornita dall'autore
     let compiledRegex;
     try {
       compiledRegex = regexService.compileRegex(secret_regex);
     } catch (err) {
+      await transaction.rollback();
       return res.status(400).json({ error: `La Regex segreta non è valida: ${err.message}` });
     }
 
-    // Verifica che la regex segreta soddisfi l'esempio pubblico positivo
     if (!compiledRegex.test(public_pos_example)) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'La tua Regex segreta NON soddisfa l\'esempio positivo pubblico fornito.' });
     }
 
-    // Verifica che la regex segreta NON soddisfi l'esempio pubblico negativo
     if (compiledRegex.test(public_neg_example)) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'La tua Regex segreta soddisfa (erroneamente) l\'esempio negativo pubblico fornito.' });
     }
 
-    // Processa le stringhe di controllo (fino a 10 positive e fino a 10 negative)
     const posStrings = Array.isArray(control_pos_strings) ? control_pos_strings.slice(0, 10).filter(s => s !== undefined && s !== '') : [];
     const negStrings = Array.isArray(control_neg_strings) ? control_neg_strings.slice(0, 10).filter(s => s !== undefined && s !== '') : [];
 
     if (posStrings.length === 0 || negStrings.length === 0) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'Fornisci almeno 1 stringa di controllo positiva e 1 negativa.' });
     }
 
-    // Verifica che la regex segreta dell'autore soddisfi tutte le stringhe di controllo
     for (const str of posStrings) {
       if (!compiledRegex.test(str)) {
+        await transaction.rollback();
         return res.status(400).json({ error: `La tua Regex segreta non soddisfa la stringa di controllo positiva: "${str}"` });
       }
     }
     for (const str of negStrings) {
       if (compiledRegex.test(str)) {
+        await transaction.rollback();
         return res.status(400).json({ error: `La tua Regex segreta soddisfa (erroneamente) la stringa di controllo negativa: "${str}"` });
       }
     }
 
-    // Transazione per inserire enigma e stringhe di controllo
-    const insertTransaction = db.transaction(() => {
-      const stmtRiddle = db.prepare(`
-        INSERT INTO riddles (author_id, title, description, secret_regex, public_pos_example, public_neg_example)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      const result = stmtRiddle.run(req.user.id, title.trim(), description.trim(), secret_regex.trim(), public_pos_example, public_neg_example);
-      const riddleId = result.lastInsertRowid;
+    const riddle = await Riddle.create({
+      author_id: req.user.id,
+      title: title.trim(),
+      description: description.trim(),
+      secret_regex: secret_regex.trim(),
+      public_pos_example,
+      public_neg_example
+    }, { transaction });
 
-      const stmtCS = db.prepare(`
-        INSERT INTO riddle_control_strings (riddle_id, string_value, is_positive)
-        VALUES (?, ?, ?)
-      `);
+    const controlStringRecords = [
+      ...posStrings.map(str => ({ riddle_id: riddle.id, string_value: str, is_positive: 1 })),
+      ...negStrings.map(str => ({ riddle_id: riddle.id, string_value: str, is_positive: 0 }))
+    ];
 
-      for (const str of posStrings) {
-        stmtCS.run(riddleId, str, 1);
-      }
-      for (const str of negStrings) {
-        stmtCS.run(riddleId, str, 0);
-      }
+    await ControlString.bulkCreate(controlStringRecords, { transaction });
 
-      return riddleId;
-    });
-
-    const riddleId = insertTransaction();
+    await transaction.commit();
 
     res.status(201).json({
       message: 'Enigma creato con successo!',
-      riddle_id: riddleId
+      riddle_id: riddle.id
     });
   } catch (err) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     next(err);
   }
 }
 
-function getAllRiddles(req, res, next) {
+async function getAllRiddles(req, res, next) {
   try {
     const userId = req.user ? req.user.id : null;
 
-    const query = `
-      SELECT 
-        r.id,
-        r.title,
-        r.description,
-        r.public_pos_example,
-        r.public_neg_example,
-        r.created_at,
-        u.id AS author_id,
-        u.username AS author_name,
-        u.avatar_url AS author_avatar,
-        COUNT(DISTINCT a.id) AS total_attempts,
-        COUNT(DISTINCT CASE WHEN a.is_solved = 1 THEN a.user_id END) AS solved_by_count,
-        MAX(CASE WHEN a.user_id = ? AND a.is_solved = 1 THEN 1 ELSE 0 END) AS is_solved_by_current_user
-      FROM riddles r
-      JOIN users u ON r.author_id = u.id
-      LEFT JOIN attempts a ON r.id = a.riddle_id
-      GROUP BY r.id
-      ORDER BY r.created_at DESC
-    `;
+    const riddles = await Riddle.findAll({
+      include: [
+        {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'username', 'avatar_url']
+        },
+        {
+          model: Attempt,
+          as: 'attempts',
+          attributes: ['id', 'user_id', 'is_solved']
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
 
-    const riddles = db.prepare(query).all(userId || 0);
+    const formattedRiddles = riddles.map(r => {
+      const attempts = r.attempts || [];
+      const solvedAttempts = attempts.filter(a => a.is_solved === 1);
+      const uniqueSolvedUsers = new Set(solvedAttempts.map(a => a.user_id));
+      const isSolvedByCurrentUser = userId ? attempts.some(a => a.user_id === userId && a.is_solved === 1) : false;
 
-    res.json({ riddles });
+      return {
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        public_pos_example: r.public_pos_example,
+        public_neg_example: r.public_neg_example,
+        created_at: r.created_at,
+        author_id: r.author ? r.author.id : null,
+        author_name: r.author ? r.author.username : 'Unknown',
+        author_avatar: r.author ? r.author.avatar_url : null,
+        total_attempts: attempts.length,
+        solved_by_count: uniqueSolvedUsers.size,
+        is_solved_by_current_user: isSolvedByCurrentUser ? 1 : 0
+      };
+    });
+
+    res.json({ riddles: formattedRiddles });
   } catch (err) {
     next(err);
   }
 }
 
-function getRiddleById(req, res, next) {
+async function getRiddleById(req, res, next) {
   try {
     const riddleId = req.params.id;
     const userId = req.user ? req.user.id : null;
 
-    const riddle = db.prepare(`
-      SELECT 
-        r.id,
-        r.title,
-        r.description,
-        r.public_pos_example,
-        r.public_neg_example,
-        r.created_at,
-        u.id AS author_id,
-        u.username AS author_name,
-        u.avatar_url AS author_avatar
-      FROM riddles r
-      JOIN users u ON r.author_id = u.id
-      WHERE r.id = ?
-    `).get(riddleId);
+    const riddle = await Riddle.findByPk(riddleId, {
+      include: [
+        {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'username', 'avatar_url']
+        }
+      ]
+    });
 
     if (!riddle) {
       return res.status(404).json({ error: 'Enigma non trovato.' });
     }
 
-    // Controlla se l'utente ha già risolto l'enigma
     let isSolved = false;
     let userAttempts = [];
-    if (userId) {
-      const solvedCheck = db.prepare(`
-        SELECT id FROM attempts WHERE riddle_id = ? AND user_id = ? AND is_solved = 1 LIMIT 1
-      `).get(riddleId, userId);
-      isSolved = !!solvedCheck;
 
-      userAttempts = db.prepare(`
-        SELECT proposed_regex, pos_passed_count, total_pos_count, neg_passed_count, total_neg_count, is_solved, created_at
-        FROM attempts
-        WHERE riddle_id = ? AND user_id = ?
-        ORDER BY created_at DESC
-      `).all(riddleId, userId);
+    if (userId) {
+      const attempts = await Attempt.findAll({
+        where: { riddle_id: riddleId, user_id: userId },
+        order: [['created_at', 'DESC']]
+      });
+
+      isSolved = attempts.some(a => a.is_solved === 1);
+      userAttempts = attempts.map(a => ({
+        proposed_regex: a.proposed_regex,
+        pos_passed_count: a.pos_passed_count,
+        total_pos_count: a.total_pos_count,
+        neg_passed_count: a.neg_passed_count,
+        total_neg_count: a.total_neg_count,
+        is_solved: a.is_solved,
+        created_at: a.created_at
+      }));
     }
 
     res.json({
       riddle: {
-        ...riddle,
+        id: riddle.id,
+        title: riddle.title,
+        description: riddle.description,
+        public_pos_example: riddle.public_pos_example,
+        public_neg_example: riddle.public_neg_example,
+        created_at: riddle.created_at,
+        author_id: riddle.author ? riddle.author.id : null,
+        author_name: riddle.author ? riddle.author.username : 'Unknown',
+        author_avatar: riddle.author ? riddle.author.avatar_url : null,
         is_solved: isSolved
       },
       attempts: userAttempts
@@ -177,7 +196,7 @@ function getRiddleById(req, res, next) {
   }
 }
 
-function submitAttempt(req, res, next) {
+async function submitAttempt(req, res, next) {
   try {
     const riddleId = req.params.id;
     const { proposed_regex } = req.body;
@@ -186,17 +205,15 @@ function submitAttempt(req, res, next) {
       return res.status(400).json({ error: 'Inserisci un\'espressione regolare per il tentativo.' });
     }
 
-    const riddle = db.prepare('SELECT id FROM riddles WHERE id = ?').get(riddleId);
+    const riddle = await Riddle.findByPk(riddleId);
     if (!riddle) {
       return res.status(404).json({ error: 'Enigma non trovato.' });
     }
 
-    // Recupera le stringhe di controllo segrete dell'enigma
-    const controlStrings = db.prepare(`
-      SELECT string_value, is_positive FROM riddle_control_strings WHERE riddle_id = ?
-    `).all(riddleId);
+    const controlStrings = await ControlString.findAll({
+      where: { riddle_id: riddleId }
+    });
 
-    // Valuta la regex proposta
     let evalResult;
     try {
       evalResult = regexService.evaluateAttempt(proposed_regex, controlStrings);
@@ -206,21 +223,16 @@ function submitAttempt(req, res, next) {
 
     const isSolvedInt = evalResult.isSolved ? 1 : 0;
 
-    // Salva il tentativo nel database
-    db.prepare(`
-      INSERT INTO attempts 
-      (user_id, riddle_id, proposed_regex, pos_passed_count, neg_passed_count, total_pos_count, total_neg_count, is_solved)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      req.user.id,
-      riddleId,
-      proposed_regex.trim(),
-      evalResult.posPassedCount,
-      evalResult.negPassedCount,
-      evalResult.totalPosCount,
-      evalResult.totalNegCount,
-      isSolvedInt
-    );
+    await Attempt.create({
+      user_id: req.user.id,
+      riddle_id: riddleId,
+      proposed_regex: proposed_regex.trim(),
+      pos_passed_count: evalResult.posPassedCount,
+      neg_passed_count: evalResult.negPassedCount,
+      total_pos_count: evalResult.totalPosCount,
+      total_neg_count: evalResult.totalNegCount,
+      is_solved: isSolvedInt
+    });
 
     res.json({
       message: evalResult.isSolved 
