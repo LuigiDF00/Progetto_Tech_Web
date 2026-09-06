@@ -432,3 +432,91 @@ button, input, textarea, select {
     display: none;
   }
 }
+
+/* Neon Styles */
+.neon-text {
+  color: #fff;
+  font-weight: 900;
+  text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #0ea5e9, 0 0 40px #0ea5e9, 0 0 80px #0ea5e9;
+}
+
+.btn-neon {
+  background: transparent !important;
+  border-width: 2px !important;
+  border-style: solid !important;
+  color: #fff !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.btn-neon:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+.btn-neon-pink {
+  border-color: #ec4899 !important;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.6), inset 0 0 8px rgba(236, 72, 153, 0.4) !important;
+}
+
+.btn-neon-cyan {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.6), inset 0 0 8px rgba(6, 182, 212, 0.4) !important;
+}
+
+.btn-neon-green {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6), inset 0 0 8px rgba(16, 185, 129, 0.4) !important;
+}
+
+.btn-neon-purple {
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.6), inset 0 0 8px rgba(168, 85, 247, 0.4) !important;
+}
+
+.btn-neon-blue {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6), inset 0 0 8px rgba(59, 130, 246, 0.4) !important;
+}
+
+.btn-neon-yellow {
+  border-color: #eab308 !important;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.6), inset 0 0 8px rgba(234, 179, 8, 0.4) !important;
+}
+
+.btn-neon-silver {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 0 12px rgba(203, 213, 225, 0.6), inset 0 0 8px rgba(203, 213, 225, 0.4) !important;
+  color: #f8fafc !important;
+}
+
+.btn-neon-bronze {
+  border-color: #d97706 !important;
+  box-shadow: 0 0 12px rgba(217, 119, 6, 0.6), inset 0 0 8px rgba(217, 119, 6, 0.4) !important;
+}
+
+/* Neon Cards */
+.neon-card {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Legend-like rank badge overlapping border */
+.neon-rank-badge {
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  background: var(--bg-dark); /* match page background */
+  padding: 0 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+}

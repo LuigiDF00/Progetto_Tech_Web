@@ -1,0 +1,10 @@
+const db = require('./database');
+console.log('Pulizia del database...');
+db.exec('PRAGMA foreign_keys = OFF;');
+db.exec('DELETE FROM attempts;');
+db.exec('DELETE FROM riddle_control_strings;');
+db.exec('DELETE FROM riddles;');
+db.exec('DELETE FROM users;');
+db.exec('PRAGMA foreign_keys = ON;');
+console.log('Database pulito. Avvio il seed...');
+require('./seed.js');

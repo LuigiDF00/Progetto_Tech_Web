@@ -2,7 +2,7 @@ const db = require('./database');
 const bcrypt = require('bcryptjs');
 
 function seedDatabase() {
-  console.log('🌱 Popolamento database con dati demo per la presentazione...');
+  console.log('🌱 Popolamento database con nuovi enigmi e creatori...');
 
   // 1. Inserisci Utenti Demo
   const passHash = bcrypt.hashSync('Password123!', 10);
@@ -12,9 +12,12 @@ function seedDatabase() {
     VALUES (?, ?, ?, ?)
   `);
 
-  insertUser.run(1, 'prof_starace', 'prof@unina.it', passHash);
-  insertUser.run(2, 'regex_master', 'master@regexriddle.it', passHash);
-  insertUser.run(3, 'coder_student', 'student@unina.it', passHash);
+  insertUser.run(1, 'Dev_Mario', 'mario@regexriddle.it', passHash);
+  insertUser.run(2, 'Dev_Luigi', 'luigi@regexriddle.it', passHash);
+  insertUser.run(3, 'Dev_Peach', 'peach@regexriddle.it', passHash);
+  insertUser.run(4, 'Dev_Toad', 'toad@regexriddle.it', passHash);
+  insertUser.run(5, 'Dev_Yoshi', 'yoshi@regexriddle.it', passHash);
+  insertUser.run(6, 'Dev_Browser', 'browser@regexriddle.it', passHash);
 
   // 2. Inserisci Enigmi Demo
   const insertRiddle = db.prepare(`
@@ -22,34 +25,59 @@ function seedDatabase() {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
+  // Enigma 1: ORO (5 risoluzioni)
   insertRiddle.run(
     1,
     1,
-    'Validazione Indirizzo IP v4',
-    'Crea una regex che accetti un formato IP classico a 4 ottetti numerici separati da punti (es. 192.168.1.1).',
-    '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$',
-    '192.168.1.1',
-    '192.168.1'
+    'SOLO NUMERI DI 4 CIFRE',
+    'Trova la regex che accetta esattamente 4 cifre numeriche. Nessun altro carattere è permesso.',
+    '^\\d{4}$',
+    '1234',
+    '123'
   );
 
+  // Enigma 2: ARGENTO (3 risoluzioni)
   insertRiddle.run(
     2,
     2,
-    'Codice Fiscale Italiano (Iniziale)',
-    'Crea una regex per la prima parte del Codice Fiscale: 6 lettere (cognome/nome) seguiti da 2 cifre numeriche dell\'anno.',
-    '^[A-Z]{6}[0-9]{2}$',
-    'RSSMRA85',
-    'RSMRA85'
+    'MATCH EMAIL',
+    'Scrivi una regex per validare indirizzi email comuni (es. nome@dominio.com).',
+    '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+    'mario@email.com',
+    'mario@email'
   );
 
+  // Enigma 3: BRONZO (2 risoluzioni)
   insertRiddle.run(
     3,
-    2,
-    'Formato Ora 24h (HH:MM)',
-    'Riconosci solo orari validi nel formato 24 ore da 00:00 a 23:59.',
-    '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$',
-    '14:30',
-    '25:61'
+    3,
+    'HEX COLOR CODES',
+    'Crea una regex per i codici colore esadecimali (#RRGGBB o #RGB).',
+    '^#(?:[0-9a-fA-F]{3}){1,2}$',
+    '#ff0099',
+    '#ff00'
+  );
+
+  // Enigma 4: 1 risoluzione
+  insertRiddle.run(
+    4,
+    4,
+    'URL SICURO (HTTPS)',
+    'Riconosci solo URL sicuri che iniziano con https:// e hanno un dominio valido.',
+    '^https://[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(?:/.*)?$',
+    'https://www.google.com',
+    'http://www.google.com'
+  );
+
+  // Enigma 5: 0 risoluzioni
+  insertRiddle.run(
+    5,
+    5,
+    'DATA FORMATO YYYY-MM-DD',
+    'Crea una regex che validi una data nel formato standard internazionale YYYY-MM-DD.',
+    '^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$',
+    '2026-09-06',
+    '2026-13-40'
   );
 
   // 3. Inserisci Stringhe di Controllo Segrete
@@ -58,26 +86,35 @@ function seedDatabase() {
     VALUES (?, ?, ?, ?)
   `);
 
-  // Enigma 1 IP
-  insertCS.run(1, 1, '10.0.0.1', 1);
-  insertCS.run(2, 1, '172.16.254.1', 1);
-  insertCS.run(3, 1, '127.0.0.1', 1);
-  insertCS.run(4, 1, '256.1.1', 0);
-  insertCS.run(5, 1, 'abc.def.ghi.jkl', 0);
-  insertCS.run(6, 1, '192.168.1.1.1', 0);
+  // E1
+  insertCS.run(1, 1, '9999', 1);
+  insertCS.run(2, 1, '0000', 1);
+  insertCS.run(3, 1, '12345', 0);
+  insertCS.run(4, 1, 'abcd', 0);
 
-  // Enigma 2 CF
-  insertCS.run(7, 2, 'DFLMRA98', 1);
-  insertCS.run(8, 2, 'BNCLSN01', 1);
-  insertCS.run(9, 2, 'ABCD12', 0);
-  insertCS.run(10, 2, 'ABCDEFGH', 0);
+  // E2
+  insertCS.run(5, 2, 'test.123@domain.co.uk', 1);
+  insertCS.run(6, 2, 'user+filter@gmail.com', 1);
+  insertCS.run(7, 2, 'test@.com', 0);
+  insertCS.run(8, 2, 'test@domain', 0);
 
-  // Enigma 3 Ora
-  insertCS.run(11, 3, '00:00', 1);
-  insertCS.run(12, 3, '23:59', 1);
-  insertCS.run(13, 3, '12:00', 1);
-  insertCS.run(14, 3, '24:00', 0);
-  insertCS.run(15, 3, '12:60', 0);
+  // E3
+  insertCS.run(9, 3, '#FFF', 1);
+  insertCS.run(10, 3, '#123456', 1);
+  insertCS.run(11, 3, '#12345', 0);
+  insertCS.run(12, 3, '123456', 0);
+
+  // E4
+  insertCS.run(13, 4, 'https://github.com/test', 1);
+  insertCS.run(14, 4, 'https://api.site.org', 1);
+  insertCS.run(15, 4, 'ftp://files.site.com', 0);
+  insertCS.run(16, 4, 'https://site', 0);
+
+  // E5
+  insertCS.run(17, 5, '1999-12-31', 1);
+  insertCS.run(18, 5, '2024-02-29', 1); // Semplicistico, va bene
+  insertCS.run(19, 5, '20-01-2024', 0);
+  insertCS.run(20, 5, '2024-1-1', 0);
 
   // 4. Inserisci Tentativi ed Enigmi Risolti per la Classifica Demo
   const insertAttempt = db.prepare(`
@@ -85,11 +122,27 @@ function seedDatabase() {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  insertAttempt.run(1, 3, 1, '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$', 3, 3, 3, 3, 1);
-  insertAttempt.run(2, 3, 2, '^[A-Z]{6}[0-9]{2}$', 2, 2, 2, 2, 1);
-  insertAttempt.run(3, 2, 1, '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$', 3, 3, 3, 3, 1);
+  let attemptId = 1;
+  // Enigma 1 (5 risoluzioni: user 2,3,4,5,6)
+  insertAttempt.run(attemptId++, 2, 1, '^\\d{4}$', 2, 2, 2, 2, 1);
+  insertAttempt.run(attemptId++, 3, 1, '^\\d{4}$', 2, 2, 2, 2, 1);
+  insertAttempt.run(attemptId++, 4, 1, '^\\d{4}$', 2, 2, 2, 2, 1);
+  insertAttempt.run(attemptId++, 5, 1, '^\\d{4}$', 2, 2, 2, 2, 1);
+  insertAttempt.run(attemptId++, 6, 1, '^\\d{4}$', 2, 2, 2, 2, 1);
 
-  console.log('✅ Popolamento dati demo completato!');
+  // Enigma 2 (3 risoluzioni: user 1,3,4)
+  insertAttempt.run(attemptId++, 1, 2, '.*', 2, 2, 2, 2, 1); // Fake solve per i dati demo
+  insertAttempt.run(attemptId++, 3, 2, '.*', 2, 2, 2, 2, 1);
+  insertAttempt.run(attemptId++, 4, 2, '.*', 2, 2, 2, 2, 1);
+
+  // Enigma 3 (2 risoluzioni: user 1,2)
+  insertAttempt.run(attemptId++, 1, 3, '.*', 2, 2, 2, 2, 1);
+  insertAttempt.run(attemptId++, 2, 3, '.*', 2, 2, 2, 2, 1);
+
+  // Enigma 4 (1 risoluzione: user 1)
+  insertAttempt.run(attemptId++, 1, 4, '.*', 2, 2, 2, 2, 1);
+
+  console.log('✅ Popolamento dati demo completato con successo!');
 }
 
 seedDatabase();

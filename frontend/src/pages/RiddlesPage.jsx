@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Puzzle, Search, CheckCircle2, PlusCircle, Filter } from 'lucide-react';
+import { Puzzle, Search, CheckCircle2, PlusCircle, Filter, Trophy } from 'lucide-react';
 
 export default function RiddlesPage() {
   const { user } = useAuth();
@@ -26,7 +26,12 @@ export default function RiddlesPage() {
     fetchRiddles();
   }, []);
 
-  const filteredRiddles = riddles.filter((riddle) => {
+  // Ordina tutti gli enigmi per numero di risoluzioni per stabilire la classifica
+  const sortedRiddles = [...riddles].sort((a, b) => b.solved_by_count - a.solved_by_count);
+  // Identifica gli ID dei primi 3 enigmi più giocati
+  const top3Ids = sortedRiddles.slice(0, 3).map(r => r.id);
+
+  const filteredRiddles = sortedRiddles.filter((riddle) => {
     // Filtro per ricerca testuale
     const matchesSearch = riddle.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           riddle.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -46,15 +51,15 @@ export default function RiddlesPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
         <div>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Puzzle size={32} style={{ color: 'var(--primary)' }} /> Galleria Sfide
+          <h1 className="neon-text" style={{ fontSize: '2.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.8rem', textTransform: 'uppercase', letterSpacing: '2px', margin: 0 }}>
+            Galleria Sfide
           </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Esplora gli enigmi creati dalla community e prova a risolverli.</p>
+          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Esplora gli enigmi creati dalla community e prova a risolverli.</p>
         </div>
 
         {user && (
-          <Link to="/create" className="btn btn-primary">
-            <PlusCircle size={18} /> Crea Nuovo Enigma
+          <Link to="/create" className="btn btn-neon btn-neon-pink">
+            CREA NUOVO ENIGMA
           </Link>
         )}
       </div>
@@ -74,33 +79,39 @@ export default function RiddlesPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Filter size={16} style={{ color: 'var(--text-muted)', marginRight: '0.3rem' }} />
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+            <div className="btn btn-neon btn-neon-blue btn-sm" style={{ pointerEvents: 'none' }}>
+              FILTRI
+            </div>
             <button
-              className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`btn btn-neon btn-sm ${filter === 'all' ? 'btn-neon-pink' : ''}`}
+              style={filter !== 'all' ? { borderColor: 'rgba(236,72,153,0.3)', color: 'rgba(255,255,255,0.6)', boxShadow: 'none' } : {}}
               onClick={() => setFilter('all')}
             >
-              Tutti ({riddles.length})
+              TUTTI ({riddles.length})
             </button>
             {user && (
               <>
                 <button
-                  className={`btn btn-sm ${filter === 'unsolved' ? 'btn-primary' : 'btn-secondary'}`}
+                  className={`btn btn-neon btn-sm ${filter === 'unsolved' ? 'btn-neon-cyan' : ''}`}
+                  style={filter !== 'unsolved' ? { borderColor: 'rgba(6,182,212,0.3)', color: 'rgba(255,255,255,0.6)', boxShadow: 'none' } : {}}
                   onClick={() => setFilter('unsolved')}
                 >
-                  Da Risolvere
+                  DA RISOLVERE
                 </button>
                 <button
-                  className={`btn btn-sm ${filter === 'solved' ? 'btn-primary' : 'btn-secondary'}`}
+                  className={`btn btn-neon btn-sm ${filter === 'solved' ? 'btn-neon-green' : ''}`}
+                  style={filter !== 'solved' ? { borderColor: 'rgba(16,185,129,0.3)', color: 'rgba(255,255,255,0.6)', boxShadow: 'none' } : {}}
                   onClick={() => setFilter('solved')}
                 >
-                  Risolti
+                  RISOLTI
                 </button>
                 <button
-                  className={`btn btn-sm ${filter === 'my_riddles' ? 'btn-primary' : 'btn-secondary'}`}
+                  className={`btn btn-neon btn-sm ${filter === 'my_riddles' ? 'btn-neon-purple' : ''}`}
+                  style={filter !== 'my_riddles' ? { borderColor: 'rgba(168,85,247,0.3)', color: 'rgba(255,255,255,0.6)', boxShadow: 'none' } : {}}
                   onClick={() => setFilter('my_riddles')}
                 >
-                  I Miei Enigmi
+                  I MIEI ENIGMI
                 </button>
               </>
             )}
@@ -127,11 +138,52 @@ export default function RiddlesPage() {
         </div>
       ) : (
         <div className="grid-3">
-          {filteredRiddles.map((riddle) => (
-            <div key={riddle.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {filteredRiddles.map((riddle) => {
+            const rankIndex = top3Ids.indexOf(riddle.id);
+            const isGold = rankIndex === 0;
+            const isSilver = rankIndex === 1;
+            const isBronze = rankIndex === 2;
+
+            let cardStyle = { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', marginTop: '1rem' };
+            let rankElement = null;
+            let cardClassName = "glass-card";
+            let buttonClass = "btn btn-primary btn-sm";
+
+            if (isGold) {
+              cardClassName = "glass-card neon-card";
+              cardStyle = { ...cardStyle, border: '3px solid #eab308', boxShadow: '0 0 20px rgba(234, 179, 8, 0.4), inset 0 0 10px rgba(234, 179, 8, 0.2)', borderRadius: '12px' };
+              rankElement = (
+                <div className="neon-rank-badge" style={{ color: '#eab308' }}>
+                  <Trophy size={16} /> ORO
+                </div>
+              );
+              buttonClass = "btn btn-neon btn-neon-yellow btn-sm";
+            } else if (isSilver) {
+              cardClassName = "glass-card neon-card";
+              cardStyle = { ...cardStyle, border: '3px solid #cbd5e1', boxShadow: '0 0 20px rgba(203, 213, 225, 0.4), inset 0 0 10px rgba(203, 213, 225, 0.2)', borderRadius: '12px' };
+              rankElement = (
+                <div className="neon-rank-badge" style={{ color: '#cbd5e1' }}>
+                  <Trophy size={16} color="#cbd5e1" /> ARGENTO
+                </div>
+              );
+              buttonClass = "btn btn-neon btn-neon-silver btn-sm";
+            } else if (isBronze) {
+              cardClassName = "glass-card neon-card";
+              cardStyle = { ...cardStyle, border: '3px solid #d97706', boxShadow: '0 0 20px rgba(217, 119, 6, 0.4), inset 0 0 10px rgba(217, 119, 6, 0.2)', borderRadius: '12px' };
+              rankElement = (
+                <div className="neon-rank-badge" style={{ color: '#d97706' }}>
+                  <Trophy size={16} color="#d97706" /> BRONZO
+                </div>
+              );
+              buttonClass = "btn btn-neon btn-neon-bronze btn-sm";
+            }
+
+            return (
+            <div key={riddle.id} className={cardClassName} style={cardStyle}>
               <div>
+                {rankElement}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{riddle.title}</h2>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>{riddle.title}</h2>
                   {riddle.is_solved_by_current_user === 1 && (
                     <span className="badge badge-emerald" title="Hai risolto questo enigma">
                       <CheckCircle2 size={12} /> Risolto
@@ -143,28 +195,26 @@ export default function RiddlesPage() {
                   {riddle.description.length > 110 ? `${riddle.description.substring(0, 110)}...` : riddle.description}
                 </p>
 
-                <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '1.2rem' }}>
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '1.2rem', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ color: '#34d399', marginBottom: '0.25rem' }}>
-                    <strong>Esempio (+):</strong> <code>{riddle.public_pos_example}</code>
-                  </div>
-                  <div style={{ color: '#fb7185' }}>
-                    <strong>Esempio (-):</strong> <code>{riddle.public_neg_example}</code>
+                    <strong>Esempio:</strong> <br/><code style={{ opacity: 0.8 }}>{riddle.public_pos_example}</code>
                   </div>
                 </div>
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-                  <span>Autore: <strong>{riddle.author_name}</strong></span>
-                  <span>Risolto da: <strong>{riddle.solved_by_count}</strong></span>
+                  <span>Autore: <strong style={{ color: 'var(--primary)' }}>{riddle.author_name}</strong></span>
+                  <span>Risolto da: <strong style={{ color: '#fff' }}>{riddle.solved_by_count}</strong></span>
                 </div>
 
-                <Link to={`/riddles/${riddle.id}`} className="btn btn-primary btn-sm" style={{ width: '100%' }}>
-                  {riddle.is_solved_by_current_user === 1 ? 'Visualizza Dettagli' : 'Gioca e Risolvi'}
+                <Link to={`/riddles/${riddle.id}`} className={buttonClass} style={{ width: '100%' }}>
+                  {riddle.is_solved_by_current_user === 1 ? 'VISUALIZZA DETTAGLI' : 'INIZIA SFIDA'}
                 </Link>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
