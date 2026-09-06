@@ -187,7 +187,7 @@ export default function RiddlesPage() {
                   </p>
 
                   {/* Code Example Box */}
-                  <div className={`card-example-box ${tier.boxClass}`}>
+                  <div className={`card-example-box ${tier ? tier.boxClass : 'standard-bg'}`}>
                     <div className="example-label">Exemplo:</div>
                     {exampleLines.map((line, lIdx) => (
                       <div key={lIdx} className="example-line">
