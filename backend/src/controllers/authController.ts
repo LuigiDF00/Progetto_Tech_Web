@@ -1,0 +1,132 @@
+import { Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { Op } from 'sequelize';
+import { User } from '../models';
+import { JWT_SECRET } from '../middlewares/authMiddleware';
+
+export async function register(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Username, email e password sono obbligatori.' });
+    }
+
+    const cleanUsername = String(username).trim();
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ error: 'Lo username deve contenere almeno 3 caratteri.' });
+    }
+
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: 'La password deve contenere almeno 6 caratteri.' });
+    }
+
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [
+          { username: cleanUsername },
+          { email: cleanEmail }
+        ]
+      }
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ error: 'Username o email già in uso.' });
+    }
+
+    const password_hash = bcrypt.hashSync(password, 10);
+    const user = await User.create({
+      username: cleanUsername,
+      email: cleanEmail,
+      password_hash
+    });
+
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(201).json({
+      message: 'Registrazione avvenuta con successo.',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar_url: user.avatar_url
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function login(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  try {
+    const { usernameOrEmail, password } = req.body;
+
+    if (!usernameOrEmail || !password) {
+      return res.status(400).json({ error: 'Inserisci username/email e password.' });
+    }
+
+    const queryStr = String(usernameOrEmail).trim();
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { username: queryStr },
+          { email: queryStr.toLowerCase() }
+        ]
+      }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Credenziali non valide.' });
+    }
+
+    const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Credenziali non valide.' });
+    }
+
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      message: 'Login effettuato con successo.',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar_url: user.avatar_url
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function me(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non autenticato.' });
+    }
+
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'username', 'email', 'avatar_url', 'created_at']
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato.' });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export default {
+  register,
+  login,
+  me
+};
